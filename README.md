@@ -81,8 +81,7 @@ Watch the demo here: [https://youtu.be/O8kfFmwkfOU](https://youtu.be/O8kfFmwkfOU
 - **Mobile App for Enhanced Accessibility**
 - **Multi-Exam Support with Custom Rules Configuration**
 
-## Contributors
-- **Ramdular Yadav** (Lead Developer)
+
 
 
 
