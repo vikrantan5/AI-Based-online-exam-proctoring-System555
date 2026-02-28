@@ -85,11 +85,5 @@ Watch the demo here: [https://youtu.be/O8kfFmwkfOU](https://youtu.be/O8kfFmwkfOU
 - **Ramdular Yadav** (Lead Developer)
 
 
-## License
-This project is licensed under the MIT License.
 
-## Contact
-For any inquiries or contributions, feel free to reach out to:
-- **Email**: rammey115@gmail.com
-- **Phone**: 9819936338
 
