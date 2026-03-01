@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Approval Management - FuturProctor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+        .back-btn {
+            display: inline-block;
+            margin-bottom: 20px;
+            padding: 10px 20px;
+            background: #667eea;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+        }
+        .back-btn:hover {
+            background: #764ba2;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        table th {
+            background: #f8f9fa;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            border-bottom: 2px solid #dee2e6;
+        }
+        table td {
+            padding: 12px;
+            border-bottom: 1px solid #dee2e6;
+        }
+        table tr:hover {
+            background: #f8f9fa;
+        }
+        .badge {
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .badge-pending { background: #fff3cd; color: #856404; }
+        .badge-approved { background: #d4edda; color: #155724; }
+        .badge-rejected { background: #f8d7da; color: #721c24; }
+        .btn-group {
+            display: flex;
+            gap: 10px;
+        }
+        .btn {
+            padding: 6px 12px;
+            border-radius: 5px;
+            text-decoration: none;
+            font-size: 14px;
+            cursor: pointer;
+            border: none;
+        }
+        .btn-approve {
+            background: #28a745;
+            color: white;
+        }
+        .btn-reject {
+            background: #dc3545;
+            color: white;
+        }
+        .btn:hover {
+            opacity: 0.9;
+        }
+        .student-photo {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+        .messages {
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+        }
+        .success { background: #d4edda; color: #155724; }
+        .warning { background: #fff3cd; color: #856404; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="{% url 'admin_dashboard_enhanced' %}" class="back-btn">← Back to Dashboard</a>
+        <h1>👥 Student Approval Management</h1>
+        <p style="color: #666; margin-bottom: 20px;">Review and approve student registrations</p>
+
+        {% if messages %}
+            {% for message in messages %}
+                <div class="messages {% if message.tags %}{{ message.tags }}{% endif %}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Photo</th>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Address</th>
+                    <th>Registered</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for student in students %}
+                <tr>
+                    <td>
+                        {% if student.photo %}
+                            <img src="{{ student.photo.url }}" alt="{{ student.name }}" class="student-photo">
+                        {% else %}
+                            👤
+                        {% endif %}
+                    </td>
+                    <td>{{ student.name }}</td>
+                    <td>{{ student.email }}</td>
+                    <td>{{ student.address|default:"N/A" }}</td>
+                    <td>{{ student.timestamp|date:"M d, Y H:i" }}</td>
+                    <td>
+                        {% if student.approval_status == 'pending' %}
+                            <span class="badge badge-pending">Pending</span>
+                        {% elif student.approval_status == 'approved' %}
+                            <span class="badge badge-approved">Approved</span>
+                        {% elif student.approval_status == 'rejected' %}
+                            <span class="badge badge-rejected">Rejected</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if student.approval_status == 'pending' %}
+                            <div class="btn-group">
+                                <form method="post" action="{% url 'approve_student' student.id %}" style="display: inline;">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-approve">✓ Approve</button>
+                                </form>
+                                <form method="post" action="{% url 'reject_student' student.id %}" style="display: inline;">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-reject">✗ Reject</button>
+                                </form>
+                            </div>
+                        {% else %}
+                            <span style="color: #999;">{{ student.approved_by.username }} on {{ student.approved_at|date:"M d, Y" }}</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" style="text-align: center; padding: 40px; color: #999;">
+                        No students found.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>

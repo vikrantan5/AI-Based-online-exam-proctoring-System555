@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exam Submitted - FuturProctor</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .success-container {
+            background: white;
+            border-radius: 15px;
+            padding: 50px;
+            text-align: center;
+            max-width: 600px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        .success-icon {
+            font-size: 80px;
+            margin-bottom: 20px;
+        }
+        h1 {
+            color: #28a745;
+            margin-bottom: 15px;
+            font-size: 32px;
+        }
+        p {
+            color: #666;
+            font-size: 16px;
+            line-height: 1.6;
+            margin-bottom: 30px;
+        }
+        .btn {
+            display: inline-block;
+            padding: 15px 40px;
+            background: #667eea;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: 500;
+            margin: 10px;
+            transition: all 0.3s;
+        }
+        .btn:hover {
+            background: #764ba2;
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body>
+    <div class="success-container">
+        <div class="success-icon">✅</div>
+        <h1>Exam Submitted Successfully!</h1>
+        <p>
+            Your exam has been submitted successfully. <br><br>
+            🔍 Your answers are being evaluated (subjective questions will be auto-graded using AI).<br>
+            📧 You'll receive an email notification once your results are published.<br>
+            📊 Check your dashboard regularly for result updates.
+        </p>
+        <div>
+            <a href="{% url 'student_dashboard_enhanced' %}" class="btn">🏠 Go to Dashboard</a>
+            <a href="{% url 'student_results' %}" class="btn">📊 View My Results</a>
+        </div>
+    </div>
+</body>
+</html>

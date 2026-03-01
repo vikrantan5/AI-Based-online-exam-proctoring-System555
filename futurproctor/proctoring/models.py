@@ -106,3 +106,160 @@ class ExamPaper(models.Model):
     subject = models.CharField(max_length=100)
     description = models.TextField(blank=True, null=True)
     duration_minutes = models.IntegerField(help_text="Exam duration in minutes")
+    exam_date = models.DateTimeField(help_text="Scheduled exam date and time")
+    instructions = models.TextField(blank=True, null=True, help_text="Exam instructions for students")
+    total_marks = models.IntegerField(default=0, help_text="Total marks for the exam")
+    passing_marks = models.IntegerField(default=0, help_text="Minimum marks to pass")
+    is_active = models.BooleanField(default=True, help_text="Is exam available for students")
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='created_exams')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.title} - {self.subject}"
+
+    class Meta:
+        ordering = ['-created_at']
+
+
+class Question(models.Model):
+    """Questions for exam papers - supports MCQ and Subjective"""
+    QUESTION_TYPES = [
+        ('mcq', 'Multiple Choice Question'),
+        ('subjective', 'Subjective Question'),
+    ]
+    
+    exam_paper = models.ForeignKey(ExamPaper, on_delete=models.CASCADE, related_name='questions')
+    question_text = models.TextField(help_text="The question text")
+    question_type = models.CharField(max_length=20, choices=QUESTION_TYPES, default='mcq')
+    
+    # For MCQ questions
+    option_a = models.CharField(max_length=500, blank=True, null=True)
+    option_b = models.CharField(max_length=500, blank=True, null=True)
+    option_c = models.CharField(max_length=500, blank=True, null=True)
+    option_d = models.CharField(max_length=500, blank=True, null=True)
+    correct_answer = models.CharField(max_length=1, blank=True, null=True, help_text="A, B, C, or D")
+    
+    # For subjective questions
+    model_answer = models.TextField(blank=True, null=True, help_text="Model answer for subjective questions")
+    
+    marks = models.IntegerField(default=1, help_text="Marks for this question")
+    order = models.IntegerField(default=0, help_text="Order of question in exam")
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.exam_paper.title} - Q{self.order}: {self.question_text[:50]}"
+
+    class Meta:
+        ordering = ['order']
+
+
+class StudentExamAttempt(models.Model):
+    """Track student's exam attempts"""
+    STATUS_CHOICES = [
+        ('ongoing', 'Ongoing'),
+        ('submitted', 'Submitted'),
+        ('evaluated', 'Evaluated'),
+        ('cancelled', 'Cancelled'),
+    ]
+    
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='exam_attempts')
+    exam_paper = models.ForeignKey(ExamPaper, on_delete=models.CASCADE, related_name='attempts')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='ongoing')
+    
+    started_at = models.DateTimeField(auto_now_add=True)
+    submitted_at = models.DateTimeField(null=True, blank=True)
+    
+    total_marks_obtained = models.FloatField(default=0.0)
+    percentage = models.FloatField(default=0.0)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.student.name} - {self.exam_paper.title} ({self.status})"
+
+    class Meta:
+        ordering = ['-started_at']
+
+
+class StudentAnswer(models.Model):
+    """Store student's answers for each question"""
+    attempt = models.ForeignKey(StudentExamAttempt, on_delete=models.CASCADE, related_name='answers')
+    question = models.ForeignKey(Question, on_delete=models.CASCADE, related_name='student_answers')
+    
+    # For MCQ
+    selected_option = models.CharField(max_length=1, blank=True, null=True, help_text="A, B, C, or D")
+    is_correct = models.BooleanField(default=False)
+    
+    # For Subjective
+    answer_text = models.TextField(blank=True, null=True, help_text="Student's subjective answer")
+    
+    # Evaluation
+    marks_obtained = models.FloatField(default=0.0)
+    ai_feedback = models.TextField(blank=True, null=True, help_text="AI-generated feedback for subjective answers")
+    manually_overridden = models.BooleanField(default=False, help_text="Was this manually graded by admin?")
+    evaluated_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='evaluated_answers')
+    evaluated_at = models.DateTimeField(null=True, blank=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.attempt.student.name} - {self.question.question_text[:30]}"
+
+
+class Result(models.Model):
+    """Published exam results"""
+    GRADE_CHOICES = [
+        ('A+', 'A+ (90-100%)'),
+        ('A', 'A (80-89%)'),
+        ('B+', 'B+ (70-79%)'),
+        ('B', 'B (60-69%)'),
+        ('C+', 'C+ (50-59%)'),
+        ('C', 'C (40-49%)'),
+        ('F', 'F (Below 40%)'),
+    ]
+    
+    attempt = models.OneToOneField(StudentExamAttempt, on_delete=models.CASCADE, related_name='result')
+    
+    total_marks = models.FloatField()
+    marks_obtained = models.FloatField()
+    percentage = models.FloatField()
+    grade = models.CharField(max_length=5, choices=GRADE_CHOICES)
+    
+    remarks = models.TextField(blank=True, null=True, help_text="Admin remarks")
+    
+    published = models.BooleanField(default=False)
+    published_at = models.DateTimeField(null=True, blank=True)
+    published_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='published_results')
+    
+    email_sent = models.BooleanField(default=False)
+    email_sent_at = models.DateTimeField(null=True, blank=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.attempt.student.name} - {self.attempt.exam_paper.title} - {self.grade}"
+
+    def calculate_grade(self):
+        """Calculate grade based on percentage"""
+        if self.percentage >= 90:
+            return 'A+'
+        elif self.percentage >= 80:
+            return 'A'
+        elif self.percentage >= 70:
+            return 'B+'
+        elif self.percentage >= 60:
+            return 'B'
+        elif self.percentage >= 50:
+            return 'C+'
+        elif self.percentage >= 40:
+            return 'C'
+        else:
+            return 'F'
+
+    class Meta:
+        ordering = ['-published_at']

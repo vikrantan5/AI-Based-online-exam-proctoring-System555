@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Available Exams - FuturProctor</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        h1 { color: #667eea; margin-bottom: 20px; }
+        .exam-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .exam-card {
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 25px;
+            transition: all 0.3s;
+        }
+        .exam-card:hover {
+            border-color: #667eea;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+        .exam-title {
+            font-size: 20px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .exam-subject {
+            color: #667eea;
+            font-weight: 600;
+            margin-bottom: 15px;
+            font-size: 16px;
+        }
+        .exam-details {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 8px;
+        }
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            background: #667eea;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            text-align: center;
+            margin-top: 15px;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+        .btn:hover {
+            background: #764ba2;
+            transform: translateY(-2px);
+        }
+        .btn-disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+        .btn-disabled:hover {
+            background: #6c757d;
+            transform: none;
+        }
+        .badge {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-top: 10px;
+        }
+        .badge-attempted { background: #fff3cd; color: #856404; }
+        .badge-available { background: #d4edda; color: #155724; }
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+        .back-btn {
+            display: inline-block;
+            margin-bottom: 20px;
+            padding: 10px 20px;
+            background: #667eea;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+        }
+        .back-btn:hover { background: #764ba2; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="{% url 'student_dashboard_enhanced' %}" class="back-btn">← Back to Dashboard</a>
+        <h1>📋 Available Exams</h1>
+        <p style="color: #666; margin-bottom: 20px;">Select an exam to start</p>
+
+        {% if all_exams %}
+            <div class="exam-grid">
+                {% for exam in all_exams %}
+                <div class="exam-card">
+                    <div class="exam-title">{{ exam.title }}</div>
+                    <div class="exam-subject">📚 {{ exam.subject }}</div>
+                    
+                    <div class="exam-details">📅 <strong>Date:</strong> {{ exam.exam_date|date:"M d, Y" }}</div>
+                    <div class="exam-details">⏰ <strong>Time:</strong> {{ exam.exam_date|date:"H:i" }}</div>
+                    <div class="exam-details">⏱ <strong>Duration:</strong> {{ exam.duration_minutes }} minutes</div>
+                    <div class="exam-details">🎯 <strong>Total Marks:</strong> {{ exam.total_marks }}</div>
+                    <div class="exam-details">❓ <strong>Questions:</strong> {{ exam.questions.count }}</div>
+                    
+                    {% if exam.instructions %}
+                    <div class="exam-details" style="margin-top: 10px; font-style: italic;">
+                        <strong>📝 Instructions:</strong> {{ exam.instructions|truncatewords:15 }}
+                    </div>
+                    {% endif %}
+                    
+                    {% if exam.id in attempted_exam_ids %}
+                        <span class="badge badge-attempted">✓ Already Attempted</span>
+                        <button class="btn btn-disabled" disabled>Already Taken</button>
+                    {% else %}
+                        <span class="badge badge-available">✓ Available</span>
+                        <a href="{% url 'start_exam' exam.id %}" class="btn" 
+                           onclick="return confirm('Are you ready to start the exam? Make sure you have a stable internet connection and your webcam is working.')">
+                            🚀 Start Exam
+                        </a>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty-state">
+                <h2>📭 No exams available</h2>
+                <p>There are no active exams at the moment. Check back later!</p>
+            </div>
+        {% endif %}
+    </div>
+</body>
+</html>

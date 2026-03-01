@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Pending Evaluations - FuturProctor</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        h1 { color: #667eea; margin-bottom: 20px; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        table th {
+            background: #f8f9fa;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            border-bottom: 2px solid #dee2e6;
+        }
+        table td {
+            padding: 12px;
+            border-bottom: 1px solid #dee2e6;
+        }
+        table tr:hover { background: #f8f9fa; }
+        .btn {
+            padding: 8px 15px;
+            background: #667eea;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            font-size: 14px;
+            display: inline-block;
+        }
+        .btn:hover { background: #764ba2; }
+        .badge {
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            font-weight: 600;
+            background: #fff3cd;
+            color: #856404;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <div>
+                <h1>📝 Pending Evaluations</h1>
+                <p style="color: #666;">Subjective answers waiting for evaluation</p>
+            </div>
+            <a href="{% url 'admin_dashboard_enhanced' %}" class="btn">← Dashboard</a>
+        </div>
+
+        {% if pending_attempts %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Student</th>
+                        <th>Email</th>
+                        <th>Exam</th>
+                        <th>Subject</th>
+                        <th>Submitted</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for attempt in pending_attempts %}
+                    <tr>
+                        <td>{{ attempt.student.name }}</td>
+                        <td>{{ attempt.student.email }}</td>
+                        <td>{{ attempt.exam_paper.title }}</td>
+                        <td>{{ attempt.exam_paper.subject }}</td>
+                        <td>{{ attempt.submitted_at|date:"M d, Y H:i" }}</td>
+                        <td><span class="badge">Needs Evaluation</span></td>
+                        <td>
+                            <a href="{% url 'evaluate_subjective_answers' attempt.id %}" class="btn">Evaluate Now</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <div class="empty-state">
+                <h2>✓ All caught up!</h2>
+                <p>No pending evaluations at the moment.</p>
+            </div>
+        {% endif %}
+    </div>
+</body>
+</html>

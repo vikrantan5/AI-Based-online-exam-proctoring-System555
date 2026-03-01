@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Evaluate Subjective Answers - FuturProctor</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        h1 { color: #667eea; margin-bottom: 10px; }
+        .info-box {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+        }
+        .answer-card {
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 25px;
+            margin-bottom: 25px;
+        }
+        .question-section {
+            margin-bottom: 20px;
+        }
+        .section-title {
+            font-weight: 600;
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+        .content-box {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            line-height: 1.6;
+            margin-bottom: 15px;
+        }
+        .student-answer {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+        }
+        .model-answer {
+            background: #d4edda;
+            border-left: 4px solid #28a745;
+        }
+        .form-group { margin-bottom: 15px; }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #333;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        input:focus, textarea:focus { outline: none; border-color: #667eea; }
+        .btn {
+            padding: 12px 30px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        .btn:hover { background: #764ba2; }
+        .btn-auto { background: #28a745; }
+        .btn-auto:hover { background: #218838; }
+        .btn-manual { background: #ffc107; color: #333; }
+        .btn-manual:hover { background: #e0a800; }
+        .max-marks {
+            color: #666;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+        .ai-note {
+            background: #e7f3ff;
+            border-left: 4px solid #2196F3;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 AI-Powered Subjective Answer Evaluation</h1>
+        <p style="color: #666; margin-bottom: 20px;">Using Groq AI for automatic grading</p>
+
+        <div class="info-box">
+            <h3 style="margin-bottom: 10px;">Exam Attempt Details</h3>
+            <p><strong>Student:</strong> {{ attempt.student.name }} ({{ attempt.student.email }})</p>
+            <p><strong>Exam:</strong> {{ attempt.exam_paper.title }} - {{ attempt.exam_paper.subject }}</p>
+            <p><strong>Submitted:</strong> {{ attempt.submitted_at|date:"M d, Y H:i" }}</p>
+            <p><strong>MCQ Marks:</strong> {{ attempt.total_marks_obtained }} (auto-graded)</p>
+        </div>
+
+        <div class="ai-note">
+            <strong>🤖 AI Evaluation Feature:</strong> Click "Auto-Evaluate with AI" to let Groq AI evaluate all subjective answers automatically. You can then review and manually override any marks if needed.
+        </div>
+
+        <form method="post">
+            {% csrf_token %}
+            
+            <div style="margin-bottom: 30px;">
+                <button type="submit" name="action" value="auto_evaluate" class="btn btn-auto">
+                    ⚡ Auto-Evaluate with AI (Groq)
+                </button>
+                <span style="color: #666; margin-left: 15px;">Or manually grade below</span>
+            </div>
+
+            <h2 style="color: #333; margin-bottom: 20px;">📝 Subjective Answers</h2>
+
+            {% for answer in subjective_answers %}
+            <div class="answer-card">
+                <h3 style="color: #333; margin-bottom: 15px;">
+                    Question {{ answer.question.order }} ({{ answer.question.marks }} marks)
+                </h3>
+                
+                <div class="question-section">
+                    <div class="section-title">❓ Question:</div>
+                    <div class="content-box">{{ answer.question.question_text }}</div>
+                </div>
+
+                <div class="question-section">
+                    <div class="section-title">✓ Model Answer:</div>
+                    <div class="content-box model-answer">{{ answer.question.model_answer }}</div>
+                </div>
+
+                <div class="question-section">
+                    <div class="section-title">✏️ Student's Answer:</div>
+                    <div class="content-box student-answer">
+                        {% if answer.answer_text %}
+                            {{ answer.answer_text }}
+                        {% else %}
+                            <em style="color: #999;">No answer provided</em>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Marks Obtained (Max: {{ answer.question.marks }})</label>
+                    <input type="number" name="marks_{{ answer.id }}" 
+                           value="{{ answer.marks_obtained }}" 
+                           min="0" max="{{ answer.question.marks }}" step="0.5" required>
+                    <div class="max-marks">Max Marks: {{ answer.question.marks }}</div>
+                </div>
+
+                <div class="form-group">
+                    <label>Feedback</label>
+                    <textarea name="feedback_{{ answer.id }}" rows="3" placeholder="Evaluation feedback">{{ answer.ai_feedback }}</textarea>
+                </div>
+
+                {% if answer.ai_feedback %}
+                <div style="background: #e7f3ff; padding: 10px; border-radius: 5px; font-size: 13px;">
+                    <strong>🤖 AI Evaluation:</strong> {{ answer.ai_feedback }}
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+
+            <div style="margin-top: 30px; padding-top: 20px; border-top: 2px solid #e0e0e0;">
+                <button type="submit" name="action" value="manual_save" class="btn btn-manual">
+                    💾 Save Manual Evaluation
+                </button>
+                <a href="{% url 'pending_evaluations_list' %}" class="btn" style="background: #6c757d;">
+                    Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+</body>
+</html>

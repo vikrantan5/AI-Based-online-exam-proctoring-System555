@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Results Management - FuturProctor</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        h1 { color: #667eea; margin-bottom: 10px; }
+        h2 {
+            color: #333;
+            font-size: 20px;
+            margin: 30px 0 15px 0;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #667eea;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        table th {
+            background: #f8f9fa;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            border-bottom: 2px solid #dee2e6;
+        }
+        table td {
+            padding: 12px;
+            border-bottom: 1px solid #dee2e6;
+        }
+        table tr:hover { background: #f8f9fa; }
+        .btn {
+            padding: 8px 15px;
+            background: #667eea;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            font-size: 14px;
+            display: inline-block;
+            margin-right: 10px;
+        }
+        .btn:hover { background: #764ba2; }
+        .badge {
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .badge-published { background: #d4edda; color: #155724; }
+        .badge-pending { background: #fff3cd; color: #856404; }
+        .grade-badge {
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        .grade-a { background: #d4edda; color: #155724; }
+        .grade-b { background: #d1ecf1; color: #0c5460; }
+        .grade-c { background: #fff3cd; color: #856404; }
+        .grade-f { background: #f8d7da; color: #721c24; }
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <div>
+                <h1>📊 Results Management</h1>
+                <p style="color: #666;">Manage all exam results</p>
+            </div>
+            <a href="{% url 'admin_dashboard_enhanced' %}" class="btn">← Dashboard</a>
+        </div>
+
+        <!-- Unpublished Results -->
+        <h2>📝 Unpublished Results (Ready to Publish)</h2>
+        {% if unpublished_attempts %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Student</th>
+                        <th>Exam</th>
+                        <th>Subject</th>
+                        <th>Marks</th>
+                        <th>Percentage</th>
+                        <th>Submitted</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for attempt in unpublished_attempts %}
+                    <tr>
+                        <td>{{ attempt.student.name }}</td>
+                        <td>{{ attempt.exam_paper.title }}</td>
+                        <td>{{ attempt.exam_paper.subject }}</td>
+                        <td>{{ attempt.total_marks_obtained }} / {{ attempt.exam_paper.total_marks }}</td>
+                        <td>{{ attempt.percentage|floatformat:2 }}%</td>
+                        <td>{{ attempt.submitted_at|date:"M d, Y" }}</td>
+                        <td>
+                            <a href="{% url 'publish_result' attempt.id %}" class="btn">Publish Result</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <div class="empty-state">
+                <p>No unpublished results</p>
+            </div>
+        {% endif %}
+
+        <!-- Published Results -->
+        <h2>✓ Published Results</h2>
+        {% if published_results %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Student</th>
+                        <th>Exam</th>
+                        <th>Subject</th>
+                        <th>Marks</th>
+                        <th>Percentage</th>
+                        <th>Grade</th>
+                        <th>Published</th>
+                        <th>Email Sent</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for result in published_results %}
+                    <tr>
+                        <td>{{ result.attempt.student.name }}</td>
+                        <td>{{ result.attempt.exam_paper.title }}</td>
+                        <td>{{ result.attempt.exam_paper.subject }}</td>
+                        <td>{{ result.marks_obtained }} / {{ result.total_marks }}</td>
+                        <td>{{ result.percentage|floatformat:2 }}%</td>
+                        <td>
+                            <span class="grade-badge {% if result.grade|slice:':1' == 'A' %}grade-a{% elif result.grade|slice:':1' == 'B' %}grade-b{% elif result.grade|slice:':1' == 'C' %}grade-c{% else %}grade-f{% endif %}">
+                                {{ result.grade }}
+                            </span>
+                        </td>
+                        <td>{{ result.published_at|date:"M d, Y H:i" }}</td>
+                        <td>
+                            {% if result.email_sent %}
+                                <span style="color: #28a745;">✓ Sent</span>
+                            {% else %}
+                                <span style="color: #dc3545;">✗ Failed</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <div class="empty-state">
+                <p>No published results yet</p>
+            </div>
+        {% endif %}
+    </div>
+</body>
+</html>

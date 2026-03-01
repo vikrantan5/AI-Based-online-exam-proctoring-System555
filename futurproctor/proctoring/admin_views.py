@@ -15,8 +15,17 @@ from django.contrib.auth.models import User
 import json
 from groq import Groq
 
-# Initialize Groq client
-groq_client = Groq(api_key=settings.GROQ_API_KEY)
+# # Initialize Groq client
+# groq_client = Groq(api_key=settings.GROQ_API_KEY)
+
+try:
+    # Try to initialize Groq client with version-compatible parameters
+    groq_client = Groq(api_key=settings.GROQ_API_KEY)
+except TypeError as e:
+    print(f"Groq client initialization error: {e}")
+    groq_client = None
+    # You can also try an alternative initialization if needed
+    # groq_client = Groq(api_key=settings.GROQ_API_KEY, http_client=None)
 
 
 @staff_member_required(login_url='/admin/login/')

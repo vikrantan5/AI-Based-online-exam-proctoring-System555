@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Take Exam - {{ exam_paper.title }}</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .exam-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+        }
+        .exam-header h1 {
+            margin-bottom: 5px;
+        }
+        .exam-info {
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-top: 15px;
+            font-size: 14px;
+        }
+        .question-card {
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 25px;
+            margin-bottom: 25px;
+        }
+        .question-number {
+            color: #667eea;
+            font-weight: bold;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+        .question-text {
+            font-size: 16px;
+            color: #333;
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+        .options {
+            margin-left: 10px;
+        }
+        .option {
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+        }
+        .option input[type="radio"] {
+            margin-right: 10px;
+            width: 18px;
+            height: 18px;
+        }
+        .option label {
+            cursor: pointer;
+            font-size: 15px;
+            line-height: 1.5;
+        }
+        textarea {
+            width: 100%;
+            min-height: 150px;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 5px;
+            font-size: 14px;
+            font-family: inherit;
+            resize: vertical;
+        }
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .submit-btn {
+            width: 100%;
+            padding: 15px;
+            background: #28a745;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 30px;
+        }
+        .submit-btn:hover {
+            background: #218838;
+        }
+        .timer {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #fff;
+            padding: 15px 25px;
+            border-radius: 10px;
+            box-shadow: 0 2px 15px rgba(0,0,0,0.2);
+            font-weight: bold;
+            font-size: 18px;
+            color: #667eea;
+        }
+        .warning-banner {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            color: #856404;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="timer" id="timer">Time Left: {{ exam_paper.duration_minutes }}:00</div>
+
+    <div class="container">
+        <div class="exam-header">
+            <h1>{{ exam_paper.title }}</h1>
+            <p>{{ exam_paper.subject }}</p>
+            <div class="exam-info">
+                <div>⏱ Duration: {{ exam_paper.duration_minutes }} minutes</div>
+                <div>🎯 Total Marks: {{ exam_paper.total_marks }}</div>
+                <div>❓ Questions: {{ questions|length }}</div>
+            </div>
+        </div>
+
+        {% if exam_paper.instructions %}
+        <div class="warning-banner">
+            <strong>📝 Instructions:</strong> {{ exam_paper.instructions }}
+        </div>
+        {% endif %}
+
+        <div class="warning-banner">
+            ⚠️ <strong>Warning:</strong> AI proctoring is active. Do not switch tabs or leave the exam window.
+        </div>
+
+        <form method="post" action="{% url 'submit_exam_new' attempt.id %}" id="examForm">
+            {% csrf_token %}
+            
+            {% for question in questions %}
+            <div class="question-card">
+                <div class="question-number">
+                    Question {{ forloop.counter }} ({{ question.marks }} mark{% if question.marks != 1 %}s{% endif %})
+                </div>
+                <div class="question-text">{{ question.text }}</div>
+                
+                {% if question.type == 'mcq' %}
+                    <div class="options">
+                        <div class="option">
+                            <input type="radio" id="q{{ question.id }}_a" name="answer_{{ question.id }}" value="A" required>
+                            <label for="q{{ question.id }}_a">A) {{ question.option_a }}</label>
+                        </div>
+                        <div class="option">
+                            <input type="radio" id="q{{ question.id }}_b" name="answer_{{ question.id }}" value="B" required>
+                            <label for="q{{ question.id }}_b">B) {{ question.option_b }}</label>
+                        </div>
+                        <div class="option">
+                            <input type="radio" id="q{{ question.id }}_c" name="answer_{{ question.id }}" value="C" required>
+                            <label for="q{{ question.id }}_c">C) {{ question.option_c }}</label>
+                        </div>
+                        <div class="option">
+                            <input type="radio" id="q{{ question.id }}_d" name="answer_{{ question.id }}" value="D" required>
+                            <label for="q{{ question.id }}_d">D) {{ question.option_d }}</label>
+                        </div>
+                    </div>
+                {% else %}
+                    <textarea name="answer_{{ question.id }}" placeholder="Write your answer here..."></textarea>
+                {% endif %}
+            </div>
+            {% endfor %}
+            
+            <button type="submit" class="submit-btn" onclick="return confirm('Are you sure you want to submit the exam? You cannot change your answers after submission.')">
+                ✓ Submit Exam
+            </button>
+        </form>
+    </div>
+
+    <script>
+        // Timer functionality
+        let timeLeft = {{ exam_paper.duration_minutes }} * 60; // in seconds
+        
+        function updateTimer() {
+            const minutes = Math.floor(timeLeft / 60);
+            const seconds = timeLeft % 60;
+            document.getElementById('timer').textContent = 
+                `Time Left: ${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+            
+            if (timeLeft <= 0) {
+                alert('Time is up! Submitting exam...');
+                document.getElementById('examForm').submit();
+            }
+            
+            timeLeft--;
+        }
+        
+        setInterval(updateTimer, 1000);
+        
+        // Prevent accidental page refresh
+        window.addEventListener('beforeunload', function(e) {
+            e.preventDefault();
+            e.returnValue = '';
+        });
+    </script>
+</body>
+</html>

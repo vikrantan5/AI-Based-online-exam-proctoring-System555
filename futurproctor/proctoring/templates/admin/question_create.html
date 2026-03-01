@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Add Question - FuturProctor</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        h1 { color: #667eea; margin-bottom: 10px; }
+        .form-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 5px; font-weight: 600; color: #333; }
+        input, textarea, select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        input:focus, textarea:focus, select:focus { outline: none; border-color: #667eea; }
+        textarea { min-height: 100px; resize: vertical; }
+        .btn {
+            padding: 12px 30px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            text-decoration: none;
+        }
+        .btn:hover { background: #764ba2; }
+        .btn-cancel { background: #6c757d; margin-left: 10px; }
+        .mcq-options { display: none; }
+        .subjective-options { display: none; }
+    </style>
+    <script>
+        function toggleQuestionType() {
+            const type = document.getElementById('question_type').value;
+            const mcqOptions = document.querySelector('.mcq-options');
+            const subjectiveOptions = document.querySelector('.subjective-options');
+            
+            if (type === 'mcq') {
+                mcqOptions.style.display = 'block';
+                subjectiveOptions.style.display = 'none';
+            } else {
+                mcqOptions.style.display = 'none';
+                subjectiveOptions.style.display = 'block';
+            }
+        }
+    </script>
+</head>
+<body>
+    <div class="container">
+        <h1>➕ Add New Question</h1>
+        <p style="color: #666; margin-bottom: 30px;">Add question to {{ exam_paper.title }}</p>
+
+        <form method="post">
+            {% csrf_token %}
+            
+            <div class="form-group">
+                <label>Question Type *</label>
+                <select id="question_type" name="question_type" onchange="toggleQuestionType()" required>
+                    <option value="mcq">Multiple Choice Question (MCQ)</option>
+                    <option value="subjective">Subjective Question</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Question Text *</label>
+                <textarea name="question_text" required placeholder="Enter the question"></textarea>
+            </div>
+
+            <div class="form-group">
+                <label>Marks *</label>
+                <input type="number" name="marks" value="1" min="1" required>
+            </div>
+
+            <div class="form-group">
+                <label>Order/Sequence *</label>
+                <input type="number" name="order" value="{{ next_order }}" min="1" required>
+            </div>
+
+            <!-- MCQ Options -->
+            <div class="mcq-options">
+                <div class="form-group">
+                    <label>Option A *</label>
+                    <input type="text" name="option_a" placeholder="Enter option A">
+                </div>
+                <div class="form-group">
+                    <label>Option B *</label>
+                    <input type="text" name="option_b" placeholder="Enter option B">
+                </div>
+                <div class="form-group">
+                    <label>Option C *</label>
+                    <input type="text" name="option_c" placeholder="Enter option C">
+                </div>
+                <div class="form-group">
+                    <label>Option D *</label>
+                    <input type="text" name="option_d" placeholder="Enter option D">
+                </div>
+                <div class="form-group">
+                    <label>Correct Answer *</label>
+                    <select name="correct_answer">
+                        <option value="A">A</option>
+                        <option value="B">B</option>
+                        <option value="C">C</option>
+                        <option value="D">D</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Subjective Options -->
+            <div class="subjective-options">
+                <div class="form-group">
+                    <label>Model Answer *</label>
+                    <textarea name="model_answer" placeholder="Enter the model/expected answer for AI evaluation" rows="6"></textarea>
+                </div>
+            </div>
+
+            <div style="margin-top: 30px;">
+                <button type="submit" class="btn">✓ Add Question</button>
+                <a href="{% url 'exam_paper_detail' exam_paper.id %}" class="btn btn-cancel">Cancel</a>
+            </div>
+        </form>
+    </div>
+    <script>
+        // Initialize on page load
+        toggleQuestionType();
+    </script>
+</body>
+</html>

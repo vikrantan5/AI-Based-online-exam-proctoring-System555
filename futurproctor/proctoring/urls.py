@@ -81,6 +81,7 @@ urlpatterns = [
     path('proctor_notifications/', views.proctor_notifications, name='proctor_notifications'),
     path('record_tab_switch/', views.record_tab_switch, name='record_tab_switch'),
     path('admin_dashboard/', views.admin_dashboard, name='admin_dashboard'),  # Old admin dashboard
+    path('admin_dashboard/add_question/', views.add_question, name='add_question'),
     path('report_page/<int:student_id>/', views.report_page, name='report_page'),
     path('logout/', views.logout, name='logout'),
     path('download_report/<int:student_id>/', views.download_report, name='download_report'),
@@ -119,5 +120,6 @@ urlpatterns = [
     path('student/exams/submission-success/', student_exam_views.exam_submission_success_new, name='exam_submission_success_new'),
     path('student/results/', student_exam_views.student_results, name='student_results'),
     path('student/results/<int:result_id>/', student_exam_views.result_detail, name='result_detail'),
+    
     
 ]+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

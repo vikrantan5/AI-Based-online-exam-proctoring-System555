@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Edit Question - FuturProctor</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        h1 { color: #667eea; margin-bottom: 10px; }
+        .form-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 5px; font-weight: 600; color: #333; }
+        input, textarea {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        input:focus, textarea:focus { outline: none; border-color: #667eea; }
+        textarea { min-height: 100px; resize: vertical; }
+        .btn {
+            padding: 12px 30px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            text-decoration: none;
+        }
+        .btn:hover { background: #764ba2; }
+        .btn-cancel { background: #6c757d; margin-left: 10px; }
+        select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>✏️ Edit Question</h1>
+        <p style="color: #666; margin-bottom: 30px;">{{ question.get_question_type_display }}</p>
+
+        <form method="post">
+            {% csrf_token %}
+            
+            <div class="form-group">
+                <label>Question Text *</label>
+                <textarea name="question_text" required>{{ question.question_text }}</textarea>
+            </div>
+
+            <div class="form-group">
+                <label>Marks *</label>
+                <input type="number" name="marks" value="{{ question.marks }}" required>
+            </div>
+
+            <div class="form-group">
+                <label>Order/Sequence *</label>
+                <input type="number" name="order" value="{{ question.order }}" required>
+            </div>
+
+            {% if question.question_type == 'mcq' %}
+                <div class="form-group">
+                    <label>Option A *</label>
+                    <input type="text" name="option_a" value="{{ question.option_a }}" required>
+                </div>
+                <div class="form-group">
+                    <label>Option B *</label>
+                    <input type="text" name="option_b" value="{{ question.option_b }}" required>
+                </div>
+                <div class="form-group">
+                    <label>Option C *</label>
+                    <input type="text" name="option_c" value="{{ question.option_c }}" required>
+                </div>
+                <div class="form-group">
+                    <label>Option D *</label>
+                    <input type="text" name="option_d" value="{{ question.option_d }}" required>
+                </div>
+                <div class="form-group">
+                    <label>Correct Answer *</label>
+                    <select name="correct_answer" required>
+                        <option value="A" {% if question.correct_answer == 'A' %}selected{% endif %}>A</option>
+                        <option value="B" {% if question.correct_answer == 'B' %}selected{% endif %}>B</option>
+                        <option value="C" {% if question.correct_answer == 'C' %}selected{% endif %}>C</option>
+                        <option value="D" {% if question.correct_answer == 'D' %}selected{% endif %}>D</option>
+                    </select>
+                </div>
+            {% else %}
+                <div class="form-group">
+                    <label>Model Answer *</label>
+                    <textarea name="model_answer" required rows="6">{{ question.model_answer }}</textarea>
+                </div>
+            {% endif %}
+
+            <div style="margin-top: 30px;">
+                <button type="submit" class="btn">✓ Update Question</button>
+                <a href="{% url 'exam_paper_detail' exam_paper.id %}" class="btn btn-cancel">Cancel</a>
+            </div>
+        </form>
+    </div>
+</body>
+</html>
