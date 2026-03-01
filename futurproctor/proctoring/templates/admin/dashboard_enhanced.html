@@ -148,8 +148,13 @@
 </head>
 <body>
     <div class="container">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <div>
         <h1>🎓 Enhanced Admin Dashboard</h1>
         <p class="subtitle">Welcome back, Admin! Here's your proctoring system overview.</p>
+         </div>
+            <a href="{% url 'logout' %}" class="action-btn" style="width: auto; padding: 10px 20px; margin: 0;">🚪 Logout</a>
+        </div>
 
         <!-- Statistics -->
         <div class="stats-grid">

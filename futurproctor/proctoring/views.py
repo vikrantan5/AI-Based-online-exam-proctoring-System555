@@ -10,9 +10,9 @@ from django.urls import reverse  # Generating dynamic URLs
 from django.views.decorators.csrf import csrf_exempt  # Disabling CSRF protection for certain views (Use cautiously)
 from django.utils.timezone import now  # Getting timezone-aware current time
 from django.core.files.base import ContentFile  # Handling in-memory file storage
-import cv2
-import io
-from PIL import Image
+# import cv2
+# import io
+# from PIL import Image
 
 # Models
 from .models import Student, Exam, CheatingEvent, CheatingImage, CheatingAudio  # Importing custom models
@@ -22,26 +22,41 @@ import os  # Operating system utilities (e.g., file handling)
 import json  # JSON handling (e.g., parsing request data)
 import threading  # Running concurrent tasks (e.g., real-time monitoring)
 import base64  # Encoding and decoding base64 (used for image handling)
-import numpy as np  # Numerical operations, especially for image processing
-import cv2  # OpenCV for computer vision tasks (e.g., face recognition)
+# import numpy as np  # Numerical operations, especially for image processing
+# import cv2  # OpenCV for computer vision tasks (e.g., face recognition)
 import logging  # Logging errors and system activity
 import time  # Time-based operations (e.g., timestamps)
-from PIL import Image  # Image processing using the Pillow library
+# from PIL import Image  # Image processing using the Pillow library
 import io  # Handling in-memory file operations
+
+
+# Import optional dependencies
+try:
+    import cv2  # OpenCV for computer vision tasks
+    import numpy as np  # Numerical operations, especially for image processing
+    from PIL import Image  # Image processing using the Pillow library
+    CV2_AVAILABLE = True
+except ImportError as e:
+    print(f"Warning: OpenCV/NumPy/PIL not installed - {e}. Camera features may not work.")
+    CV2_AVAILABLE = False
 
 # Machine Learning Imports (Custom AI Models for Proctoring)
 try:
     from .ml_models.object_detection import detectObject  # Detecting objects in the exam environment
     from .ml_models.audio_detection import audio_detection  # Detecting external sounds for cheating detection
     from .ml_models.gaze_tracking import gaze_tracking # Tracking eye gaze to detect focus and distractions
+    ML_MODELS_AVAILABLE = True
 except ImportError as e:
     print(f"Warning: ML models import failed - {e}. Proctoring features may not work.")
+    ML_MODELS_AVAILABLE = False
 
 # Fix: Import face_recognition (Previously missing)
 try:
     import face_recognition  # Used for facial recognition, comparing student faces with stored images
+    FACE_RECOGNITION_AVAILABLE = True
 except ImportError:
     print("Warning: face_recognition not installed. Face recognition features may not work.")
+    FACE_RECOGNITION_AVAILABLE = False
 
 # Fix: Proper datetime handling for Nepal Time Zone (Asia/Kathmandu)
 import pytz  # For timezone handling
@@ -146,8 +161,13 @@ def get_face_encoding(image):
     Extracts face encoding from an image using the face_recognition library.
     - Detects faces in the image.
     - Returns the encoding of the first face found.
-    - Returns None if no faces are detected.
+    
+    - Returns None if no faces are detected or if face_recognition is not available.
     """
+    if not FACE_RECOGNITION_AVAILABLE:
+        print("Warning: face_recognition not available")
+        return None
+    
     face_locations = face_recognition.face_locations(image)  # Detect faces in the image
     if not face_locations:
         return None  # Return None if no faces are detected
@@ -155,6 +175,8 @@ def get_face_encoding(image):
 
 # Helper function to match face encodings
 def match_face_encodings(captured_encoding, stored_encoding):
+    if not FACE_RECOGNITION_AVAILABLE:
+        return False
     return face_recognition.compare_faces([stored_encoding], captured_encoding)[0]  # Compare encodings
 
 
@@ -211,10 +233,18 @@ def login(request):
                     request.session['student_id'] = student.id
                     request.session['student_name'] = student.name
 
+
+                       # Redirect to appropriate dashboard based on user role
+                    if user.is_staff or user.is_superuser:
+                        redirect_url = "/admin/dashboard-enhanced/"
+                    else:
+                        redirect_url = "/student/dashboard-enhanced/"
+
                     # Return a success response with redirect URL and student name
                     return JsonResponse({
                         "success": True,
-                        "redirect_url": "/dashboard/",
+                        # "redirect_url": "/dashboard/",
+                        "redirect_url": redirect_url,
                         "student_name": student.name
                     })
                 else:
@@ -297,21 +327,17 @@ def stop_event(request):
 @login_required
 def dashboard(request):
     """
-    Renders the dashboard page for authenticated users.
-    - Retrieves the user's name from the session.
-    - Displays personalized content on the dashboard.
-    - Handles cases where the user is not logged in (defaults to 'Guest').
+    Redirects to appropriate enhanced dashboard based on user role.
+    - Admin/Staff users → admin/dashboard-enhanced/
+    - Regular students → student/dashboard-enhanced/
     """
-    # Retrieve the user's name from the session (default to 'Guest' if not found)
-    user_name = request.session.get('user_name', 'Guest')
-
-    # Prepare context data to pass to the template
-    context = {
-        'user_name': user_name,  # Pass the user's name to the template
-    }
-
-    # Render the dashboard template with the context data
-    return render(request, 'dashboard.html', context)
+    user = request.user
+    
+    # Redirect to appropriate dashboard based on user role
+    if user.is_staff or user.is_superuser:
+        return redirect('admin_dashboard_enhanced')
+    else:
+        return redirect('student_dashboard_enhanced')
 
 
 
@@ -700,26 +726,8 @@ from django.contrib.admin.views.decorators import staff_member_required
 from .models import Student, Exam, CheatingEvent, CheatingImage, CheatingAudio
 @staff_member_required(login_url='/admin/login/')
 def admin_dashboard(request):
-    # Fetch students with counts for exams and cheating events
-    students = Student.objects.annotate(
-        exam_count=Count('exams'),
-        cheating_event_count=Count('cheating_events')
-    ).prefetch_related('exams', 'cheating_events')
-    
-    # Calculate trust score and exam scores for each student
-    for student in students:
-        # Example: Trust score decreases 10 points per cheating event (with a floor of 0)
-        student.trust_score = max(0, 100 - (student.cheating_event_count * 10))
-        
-        for exam in student.exams.all():
-            if exam.total_questions and exam.total_questions > 0 and exam.percentage_score is None:
-                exam.percentage_score = calculate_exam_score(exam)
-                exam.save()
-    
-    context = {
-        'students': students,
-    }
-    return render(request, 'admin_dashboard.html', context)
+        """Redirect old admin dashboard to new enhanced version"""
+        return redirect('admin_dashboard_enhanced')
 
 ## exam score
 def calculate_exam_score(exam):

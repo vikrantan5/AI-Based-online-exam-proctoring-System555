@@ -129,8 +129,13 @@
 </head>
 <body>
     <div class="container">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <div>
         <h1>🎓 Welcome, {{ student.name }}!</h1>
-        <p style="color: #666; margin-bottom: 20px;">Your Student Dashboard</p>
+         <p style="color: #666;">Student Dashboard - Track your progress and manage your exams</p>
+            </div>
+            <a href="{% url 'logout' %}" class="action-btn" style="width: auto; padding: 10px 20px;">🚪 Logout</a>
+        </div>
 
         <!-- Approval Status Banner -->
         {% if approval_status == 'pending' %}
@@ -172,7 +177,7 @@
         <div class="quick-actions">
             <a href="{% url 'available_exams' %}" class="action-btn">📋 View Available Exams</a>
             <a href="{% url 'student_results' %}" class="action-btn">📊 My Results</a>
-            <a href="{% url 'dashboard' %}" class="action-btn">🔙 Old Dashboard</a>
+            <!-- <a href="{% url 'dashboard' %}" class="action-btn">🔙 Old Dashboard</a> -->
         </div>
         {% endif %}
 
