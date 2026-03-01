@@ -19,6 +19,12 @@ def get_nepal_time_str():
     return get_nepal_time().strftime('%Y-%m-%d %I:%M:%S %p %Z')
 
 class Student(models.Model):
+    APPROVAL_STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+    ]
+    
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='student', null=True, blank=True)
     name = models.CharField(max_length=255)
     address = models.TextField(null=True, blank=True)
@@ -27,6 +33,9 @@ class Student(models.Model):
     face_encoding = models.JSONField(null=True, blank=True)
     timestamp = models.DateTimeField(default=datetime.now())
     feedback = models.TextField(null=True, blank=True, max_length=1000)
+    approval_status = models.CharField(max_length=20, choices=APPROVAL_STATUS_CHOICES, default='pending')
+    approved_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='approved_students')
+    approved_at = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
         return self.name
@@ -78,3 +87,22 @@ class CheatingAudio(models.Model):
     event = models.ForeignKey(CheatingEvent, on_delete=models.CASCADE, related_name='cheating_audios')
     audio = models.FileField(upload_to='cheating_audios/', blank=True, null=True)
     timestamp = models.DateTimeField(default=datetime.now())
+
+
+
+
+
+
+
+
+
+
+
+
+
+class ExamPaper(models.Model):
+    """Exam paper with multi-subject support"""
+    title = models.CharField(max_length=255)
+    subject = models.CharField(max_length=100)
+    description = models.TextField(blank=True, null=True)
+    duration_minutes = models.IntegerField(help_text="Exam duration in minutes")

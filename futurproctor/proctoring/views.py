@@ -30,14 +30,18 @@ from PIL import Image  # Image processing using the Pillow library
 import io  # Handling in-memory file operations
 
 # Machine Learning Imports (Custom AI Models for Proctoring)
-from .ml_models.object_detection import detectObject  # Detecting objects in the exam environment
-from .ml_models.audio_detection import audio_detection  # Detecting external sounds for cheating detection
-from .ml_models.gaze_tracking import gaze_tracking # Tracking eye gaze to detect focus and distractions 
-
-# from .ml_models.gaze_tracking import gaze_tracking  # Tracking eye gaze to detect focus and distractions
+try:
+    from .ml_models.object_detection import detectObject  # Detecting objects in the exam environment
+    from .ml_models.audio_detection import audio_detection  # Detecting external sounds for cheating detection
+    from .ml_models.gaze_tracking import gaze_tracking # Tracking eye gaze to detect focus and distractions
+except ImportError as e:
+    print(f"Warning: ML models import failed - {e}. Proctoring features may not work.")
 
 # Fix: Import face_recognition (Previously missing)
-import face_recognition  # Used for facial recognition, comparing student faces with stored images
+try:
+    import face_recognition  # Used for facial recognition, comparing student faces with stored images
+except ImportError:
+    print("Warning: face_recognition not installed. Face recognition features may not work.")
 
 # Fix: Proper datetime handling for Nepal Time Zone (Asia/Kathmandu)
 import pytz  # For timezone handling
@@ -790,8 +794,12 @@ def report_page(request, student_id):
 
 
 from django.template.loader import get_template
-from xhtml2pdf import pisa
-# (Ensure you import any helper functions you might have, e.g., get_detected_objects_string)
+try:
+    from xhtml2pdf import pisa
+    PDF_AVAILABLE = True
+except ImportError:
+    PDF_AVAILABLE = False
+    print("Warning: xhtml2pdf not installed. PDF download feature will be disabled.")
 
 def download_report(request, student_id):
     # Retrieve student and related data
