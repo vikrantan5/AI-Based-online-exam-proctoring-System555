@@ -13,19 +13,10 @@ from .models import (
 )
 from django.contrib.auth.models import User
 import json
-from groq import Groq
 
-# # Initialize Groq client
-# groq_client = Groq(api_key=settings.GROQ_API_KEY)
-
-try:
-    # Try to initialize Groq client with version-compatible parameters
-    groq_client = Groq(api_key=settings.GROQ_API_KEY)
-except TypeError as e:
-    print(f"Groq client initialization error: {e}")
-    groq_client = None
-    # You can also try an alternative initialization if needed
-    # groq_client = Groq(api_key=settings.GROQ_API_KEY, http_client=None)
+# Import email and Groq services
+from .email_service import send_result_published_email, send_approval_email, send_rejection_email
+from .groq_service import get_groq_service
 
 
 @staff_member_required(login_url='/admin/login/')
@@ -159,10 +150,13 @@ def approve_student(request, student_id):
     student.approved_at = timezone.now()
     student.save()
 
-    # Send approval email
-    send_approval_email(student, approved=True)
+    # Send approval email using email service
+    email_sent = send_approval_email(student, request.user)
+    if email_sent:
+        messages.success(request, f"Student {student.name} has been approved and notified via email!")
+    else:
+        messages.success(request, f"Student {student.name} has been approved! (Email notification failed)")
     
-    messages.success(request, f"Student {student.name} has been approved!")
     return redirect('student_approval_list')
 
 
@@ -176,10 +170,13 @@ def reject_student(request, student_id):
     student.approved_at = timezone.now()
     student.save()
 
-        # Send rejection email
-    send_approval_email(student, approved=False)
-    
-    messages.warning(request, f"Student {student.name} has been rejected!")
+       # Send rejection email using email service
+    rejection_reason = request.POST.get('rejection_reason', None)
+    email_sent = send_rejection_email(student, rejection_reason)
+    if email_sent:
+        messages.warning(request, f"Student {student.name} has been rejected and notified via email!")
+    else:
+        messages.warning(request, f"Student {student.name} has been rejected! (Email notification failed)")
     return redirect('student_approval_list')
 
 
@@ -401,7 +398,8 @@ def evaluate_subjective_answers(request, attempt_id):
         action = request.POST.get('action')
         
         if action == 'auto_evaluate':
-            # Auto-evaluate using Groq AI
+            # Auto-evaluate using Groq AI service
+            groq_service = get_groq_service()
             for answer in subjective_answers:
                 if not answer.answer_text:
                     answer.marks_obtained = 0
@@ -410,8 +408,8 @@ def evaluate_subjective_answers(request, attempt_id):
                     continue
                 
                 try:
-                    # Call Groq API for evaluation
-                    evaluation = evaluate_with_groq(
+                    # Call Groq service for evaluation
+                    evaluation = groq_service.evaluate_subjective_answer(
                         question_text=answer.question.question_text,
                         model_answer=answer.question.model_answer,
                         student_answer=answer.answer_text,
@@ -429,7 +427,7 @@ def evaluate_subjective_answers(request, attempt_id):
                     answer.marks_obtained = 0
                     answer.save()
             
-            messages.success(request, "Subjective answers auto-evaluated successfully!")
+            messages.success(request, "Subjective answers auto-evaluated successfully using Groq AI!")
             
         elif action == 'manual_save':
             # Manual override
@@ -464,203 +462,10 @@ def evaluate_subjective_answers(request, attempt_id):
     return render(request, 'admin/evaluate_subjective_answers.html', context)
 
 
-def evaluate_with_groq(question_text, model_answer, student_answer, max_marks):
-    """Use Groq AI to evaluate subjective answer"""
-    
-    prompt = f"""You are an expert evaluator. Evaluate the following student's answer and provide marks and feedback.
-
-Question: {question_text}
-
-Model Answer: {model_answer}
-
-Student's Answer: {student_answer}
-
-Maximum Marks: {max_marks}
-
-Provide your evaluation in the following JSON format:
-{{
-    "marks": <marks out of {max_marks}>,
-    "feedback": "<detailed feedback explaining the marks>"
-}}
-
-Be fair and consistent. Consider:
-1. Correctness and accuracy
-2. Completeness of the answer
-3. Understanding of concepts
-4. Clarity of explanation
-"""
-    
-    try:
-        response = groq_client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            messages=[
-                {"role": "system", "content": "You are an expert academic evaluator. Always respond with valid JSON only."},
-                {"role": "user", "content": prompt}
-            ],
-            temperature=0.3,
-            max_tokens=500
-        )
-        
-        result_text = response.choices[0].message.content.strip()
-        
-        # Try to extract JSON from response
-        if '```json' in result_text:
-            result_text = result_text.split('```json')[1].split('```')[0].strip()
-        elif '```' in result_text:
-            result_text = result_text.split('```')[1].split('```')[0].strip()
-        
-        evaluation = json.loads(result_text)
-        
-        # Ensure marks don't exceed max_marks
-        evaluation['marks'] = min(float(evaluation['marks']), float(max_marks))
-        
-        return evaluation
-        
-    except Exception as e:
-        # Fallback: give 50% marks if AI fails
-        return {
-            'marks': max_marks * 0.5,
-            'feedback': f"AI evaluation failed: {str(e)}. Assigned 50% marks by default. Please manually review."
-        }
 
 
-@staff_member_required(login_url='/admin/login/')
-def publish_result(request, attempt_id):
-    """Publish result to student"""
-    attempt = get_object_or_404(StudentExamAttempt, id=attempt_id)
-    
-    if request.method == 'POST':
-        remarks = request.POST.get('remarks', '')
-        
-        # Create or update result
-        result, created = Result.objects.get_or_create(
-            attempt=attempt,
-            defaults={
-                'total_marks': attempt.exam_paper.total_marks,
-                'marks_obtained': attempt.total_marks_obtained,
-                'percentage': attempt.percentage,
-                'remarks': remarks,
-            }
-        )
-        
-        if not created:
-            result.remarks = remarks
-            result.marks_obtained = attempt.total_marks_obtained
-            result.percentage = attempt.percentage
-        
-        result.grade = result.calculate_grade()
-        result.published = True
-        result.published_at = timezone.now()
-        result.published_by = request.user
-        result.save()
-        
-        # Send email notification
-        send_result_email(attempt.student, attempt, result)
-        
-        messages.success(request, f"Result published for {attempt.student.name}!")
-        return redirect('admin_dashboard_enhanced')
-    
-    # Calculate all details
-    all_answers = attempt.answers.all().select_related('question')
-    
-    context = {
-        'attempt': attempt,
-        'all_answers': all_answers,
-    }
-    
-    return render(request, 'admin/publish_result.html', context)
 
 
-def send_result_email(student, attempt, result):
-    """Send result notification email to student"""
-    subject = f"Exam Result Published: {attempt.exam_paper.title}"
-    
-    message = f"""
-Dear {student.name},
-
-Your result for {attempt.exam_paper.title} ({attempt.exam_paper.subject}) has been published.
-
-Result Summary:
-- Total Marks: {result.total_marks}
-- Marks Obtained: {result.marks_obtained}
-- Percentage: {result.percentage:.2f}%
-- Grade: {result.grade}
-
-{f"Remarks: {result.remarks}" if result.remarks else ""}
-
-Login to your dashboard to view detailed results.
-
-Best regards,
-FuturProctor Team
-"""
-    
-    try:
-        send_mail(
-            subject,
-            message,
-            settings.DEFAULT_FROM_EMAIL,
-            [student.email],
-            fail_silently=False,
-        )
-        result.email_sent = True
-        result.email_sent_at = timezone.now()
-        result.save()
-    except Exception as e:
-        print(f"Error sending email: {e}")
-
-
-def send_approval_email(student, approved=True):
-    """Send approval/rejection notification email to student"""
-    if approved:
-        subject = "Account Approved - FuturProctor Exam System"
-        message = f"""
-Dear {student.name},
-
-Congratulations! Your account has been approved by the admin.
-
-You can now login and access all available exams.
-
-Account Details:
-- Name: {student.name}
-- Email: {student.email}
-- Status: Approved
-- Approved on: {student.approved_at.strftime('%Y-%m-%d %H:%M:%S') if student.approved_at else 'N/A'}
-
-Login to your dashboard to view available exams and start taking tests.
-
-Best regards,
-FuturProctor Team
-"""
-    else:
-        subject = "Account Status Update - FuturProctor Exam System"
-        message = f"""
-Dear {student.name},
-
-We regret to inform you that your account registration has been rejected by the admin.
-
-Account Details:
-- Name: {student.name}
-- Email: {student.email}
-- Status: Rejected
-- Reviewed on: {student.approved_at.strftime('%Y-%m-%d %H:%M:%S') if student.approved_at else 'N/A'}
-
-If you believe this is a mistake or need more information, please contact the administrator.
-
-Best regards,
-FuturProctor Team
-"""
-    
-    try:
-        send_mail(
-            subject,
-            message,
-            settings.DEFAULT_FROM_EMAIL,
-            [student.email],
-            fail_silently=False,
-        )
-        print(f"{'Approval' if approved else 'Rejection'} email sent successfully to {student.email}")
-    except Exception as e:
-        print(f"Error sending {'approval' if approved else 'rejection'} email: {e}")
 
 @staff_member_required(login_url='/admin/login/')
 def results_management(request):
@@ -680,3 +485,66 @@ def results_management(request):
     }
     
     return render(request, 'admin/results_management.html', context)
+
+
+
+
+
+
+@staff_member_required(login_url='/admin/login/')
+def publish_result(request, attempt_id):
+    """Publish a single result for a student attempt"""
+    attempt = get_object_or_404(StudentExamAttempt, id=attempt_id)
+    
+    if request.method == 'POST':
+        # Check if result already exists
+        result, created = Result.objects.get_or_create(
+            attempt=attempt,
+            defaults={
+                'student': attempt.student,
+                'exam_paper': attempt.exam_paper,
+                'total_marks': attempt.total_marks_obtained or 0,
+                'max_marks': attempt.exam_paper.total_marks,
+                'percentage': attempt.percentage or 0,
+                'passed': (attempt.percentage or 0) >= (attempt.exam_paper.passing_marks or 40),
+                'published_by': request.user,
+                'published_at': timezone.now(),
+                'published': True
+            }
+        )
+        
+        if not created:
+            # Update existing result
+            result.total_marks = attempt.total_marks_obtained or 0
+            result.max_marks = attempt.exam_paper.total_marks
+            result.percentage = attempt.percentage or 0
+            result.passed = (attempt.percentage or 0) >= (attempt.exam_paper.passing_marks or 40)
+            result.published_by = request.user
+            result.published_at = timezone.now()
+            result.published = True
+            result.save()
+        
+        # Send email notification if email service is available
+        try:
+            from .email_service import send_result_published_email
+            email_sent = send_result_published_email(attempt.student, attempt, result)
+            if email_sent:
+                messages.success(request, f"Result for {attempt.student.name} published and email notification sent!")
+            else:
+                messages.success(request, f"Result for {attempt.student.name} published! (Email notification failed)")
+        except ImportError:
+            messages.success(request, f"Result for {attempt.student.name} published successfully!")
+        
+        return redirect('results_management')
+    
+    # GET request - show confirmation page
+    context = {
+        'attempt': attempt,
+        'student': attempt.student,
+        'exam': attempt.exam_paper,
+        'total_obtained': attempt.total_marks_obtained or 0,
+        'percentage': attempt.percentage or 0,
+        'passed': (attempt.percentage or 0) >= (attempt.exam_paper.passing_marks or 40)
+    }
+    
+    return render(request, 'admin/publish_result_confirm.html', context)

@@ -1,0 +1,35 @@
+{% extends "admin/base_site.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <h1>Publish Result</h1>
+    
+    <div class="card">
+        <div class="card-body">
+            <h5 class="card-title">Confirm Result Publication</h5>
+            
+            <div class="mt-4">
+                <p><strong>Student:</strong> {{ student.name }} ({{ student.email }})</p>
+                <p><strong>Exam:</strong> {{ exam.title }}</p>
+                <p><strong>Total Marks Obtained:</strong> {{ total_obtained }}/{{ exam.total_marks }}</p>
+                <p><strong>Percentage:</strong> {{ percentage|floatformat:2 }}%</p>
+                <p><strong>Result:</strong> 
+                    <span class="badge {% if passed %}badge-success{% else %}badge-danger{% endif %}">
+                        {% if passed %}PASS{% else %}FAIL{% endif %}
+                    </span>
+                </p>
+            </div>
+            
+            <form method="post" class="mt-4">
+                {% csrf_token %}
+                <p>Are you sure you want to publish this result? The student will be notified via email.</p>
+                
+                <div class="form-group">
+                    <button type="submit" class="btn btn-success">Yes, Publish Result</button>
+                    <a href="{% url 'results_management' %}" class="btn btn-secondary">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

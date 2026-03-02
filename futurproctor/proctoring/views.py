@@ -773,27 +773,30 @@ def report_page(request, student_id):
     # into a URL via the `.url` attribute once media is configured correctly.
     cheating_audios = CheatingAudio.objects.filter(event__student=student)
     audio_urls = [audio.audio.url for audio in cheating_audios if audio.audio]
+    
+    # Collect cheating images
+    cheating_images_data = [
+        {
+            'url': img.image.url,
+            'event_type': img.event.event_type,
+            'timestamp': img.timestamp
+        }
+        for img in CheatingImage.objects.filter(event__student=student)
+    ]
 
     context = {
         'student': student,
         'exam': exam,
         'detected_objects': detected_objects_str,
         'total_tab_switch_count': total_tab_switch_count,
-        # You can also add correct answer attempt and total questions:
-        'correct_answers': exam.correct_answers,
-        'total_questions': exam.total_questions,
+        # Handle None exam case
+        'correct_answers': exam.correct_answers if exam else 0,
+        'total_questions': exam.total_questions if exam else 0,
         'cheating_status': any(
             event.event_type in ['object_detected', 'multiple_faces_detected', 'tab_switch']
             for event in cheating_events
         ),
-        'cheating_images': [
-            {
-                'url': img.image.url,
-                'event_type': img.event.event_type,
-                'timestamp': img.timestamp
-            }
-            for img in CheatingImage.objects.filter(event__student=student)
-        ],
+        'cheating_images': cheating_images_data,
         'audio_urls': audio_urls,
         'cheating_events': cheating_events,  # if you need to list them
     }
