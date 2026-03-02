@@ -158,6 +158,9 @@ def approve_student(request, student_id):
     student.approved_by = request.user
     student.approved_at = timezone.now()
     student.save()
+
+    # Send approval email
+    send_approval_email(student, approved=True)
     
     messages.success(request, f"Student {student.name} has been approved!")
     return redirect('student_approval_list')
@@ -172,6 +175,9 @@ def reject_student(request, student_id):
     student.approved_by = request.user
     student.approved_at = timezone.now()
     student.save()
+
+        # Send rejection email
+    send_approval_email(student, approved=False)
     
     messages.warning(request, f"Student {student.name} has been rejected!")
     return redirect('student_approval_list')
@@ -602,6 +608,59 @@ FuturProctor Team
     except Exception as e:
         print(f"Error sending email: {e}")
 
+
+def send_approval_email(student, approved=True):
+    """Send approval/rejection notification email to student"""
+    if approved:
+        subject = "Account Approved - FuturProctor Exam System"
+        message = f"""
+Dear {student.name},
+
+Congratulations! Your account has been approved by the admin.
+
+You can now login and access all available exams.
+
+Account Details:
+- Name: {student.name}
+- Email: {student.email}
+- Status: Approved
+- Approved on: {student.approved_at.strftime('%Y-%m-%d %H:%M:%S') if student.approved_at else 'N/A'}
+
+Login to your dashboard to view available exams and start taking tests.
+
+Best regards,
+FuturProctor Team
+"""
+    else:
+        subject = "Account Status Update - FuturProctor Exam System"
+        message = f"""
+Dear {student.name},
+
+We regret to inform you that your account registration has been rejected by the admin.
+
+Account Details:
+- Name: {student.name}
+- Email: {student.email}
+- Status: Rejected
+- Reviewed on: {student.approved_at.strftime('%Y-%m-%d %H:%M:%S') if student.approved_at else 'N/A'}
+
+If you believe this is a mistake or need more information, please contact the administrator.
+
+Best regards,
+FuturProctor Team
+"""
+    
+    try:
+        send_mail(
+            subject,
+            message,
+            settings.DEFAULT_FROM_EMAIL,
+            [student.email],
+            fail_silently=False,
+        )
+        print(f"{'Approval' if approved else 'Rejection'} email sent successfully to {student.email}")
+    except Exception as e:
+        print(f"Error sending {'approval' if approved else 'rejection'} email: {e}")
 
 @staff_member_required(login_url='/admin/login/')
 def results_management(request):
