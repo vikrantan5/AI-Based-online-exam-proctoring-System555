@@ -548,6 +548,7 @@ def exam(request):
     # Render the exam template with questions and tab count
     return render(request, 'exam.html', {
         'questions': questions,
+        
         'warning': warning,
         'tab_count': tab_count,
     })

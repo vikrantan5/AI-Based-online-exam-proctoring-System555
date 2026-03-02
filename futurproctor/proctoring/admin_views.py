@@ -60,6 +60,63 @@ def admin_dashboard_enhanced(request):
     pending_students = Student.objects.filter(
         approval_status='pending'
     ).order_by('-timestamp')[:10]
+
+
+     # ML Proctoring Reports - Get students with exam attempts and their proctoring data
+    from .models import CheatingImage, CheatingAudio
+    from django.db.models import Prefetch
+    
+    # Get all students who have taken exams with their cheating events
+    proctoring_reports = []
+    students_with_attempts = Student.objects.filter(
+        exam_attempts__isnull=False
+    ).distinct().prefetch_related(
+        Prefetch('cheating_events', queryset=CheatingEvent.objects.all()),
+        'exam_attempts__exam_paper'
+    )[:20]  # Limit to 20 most recent
+    
+    for student in students_with_attempts:
+        cheating_events = student.cheating_events.all()
+        
+        # Get tab switch count
+        tab_switches = cheating_events.aggregate(total=Sum('tab_switch_count'))['total'] or 0
+        
+        # Get detected objects
+        detected_objects = []
+        for event in cheating_events:
+            if event.detected_objects:
+                if isinstance(event.detected_objects, str):
+                    import json
+                    try:
+                        objs = json.loads(event.detected_objects)
+                        if isinstance(objs, list):
+                            detected_objects.extend(objs)
+                    except:
+                        pass
+                elif isinstance(event.detected_objects, list):
+                    detected_objects.extend(event.detected_objects)
+        detected_objects = list(set(detected_objects))  # Remove duplicates
+        detected_objects_str = ", ".join(detected_objects) if detected_objects else "None"
+        
+        # Check if cheating detected
+        cheating_detected = any(
+            event.cheating_flag or event.tab_switch_count > 0
+            for event in cheating_events
+        )
+        
+        # Get latest exam attempt
+        latest_attempt = student.exam_attempts.order_by('-submitted_at').first()
+        
+        proctoring_reports.append({
+            'student': student,
+            'latest_exam': latest_attempt.exam_paper.title if latest_attempt else 'N/A',
+            'tab_switches': tab_switches,
+            'detected_objects': detected_objects_str,
+            'cheating_detected': cheating_detected,
+            'has_images': CheatingImage.objects.filter(event__student=student).exists(),
+            'has_audio': CheatingAudio.objects.filter(event__student=student).exists(),
+        })
+    
     
     context = {
         'total_students': total_students,
@@ -74,6 +131,7 @@ def admin_dashboard_enhanced(request):
         'upcoming_exams': upcoming_exams,
         'pending_subjective': pending_subjective,
         'pending_students': pending_students,
+        'proctoring_reports': proctoring_reports,  # ML Proctoring data
     }
     
     return render(request, 'admin/dashboard_enhanced.html', context)

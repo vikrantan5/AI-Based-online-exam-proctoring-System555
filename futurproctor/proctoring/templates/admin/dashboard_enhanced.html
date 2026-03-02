@@ -289,6 +289,64 @@
                 <div class="empty-state">✓ No pending evaluations</div>
             {% endif %}
         </div>
+          <!-- ML Proctoring Reports Section -->
+        <div class="section">
+            <h2 class="section-title">🎥 ML Proctoring Reports</h2>
+            {% if proctoring_reports %}
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Student Name</th>
+                            <th>Latest Exam</th>
+                            <th>Tab Switches</th>
+                            <th>Detected Objects</th>
+                            <th>Status</th>
+                            <th>Evidence</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for report in proctoring_reports %}
+                        <tr>
+                            <td>{{ report.student.name }}</td>
+                            <td>{{ report.latest_exam }}</td>
+                            <td>
+                                {% if report.tab_switches > 0 %}
+                                    <span style="color: #dc3545; font-weight: bold;">{{ report.tab_switches }}</span>
+                                {% else %}
+                                    {{ report.tab_switches }}
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if report.detected_objects != "None" %}
+                                    <span style="color: #dc3545;">{{ report.detected_objects }}</span>
+                                {% else %}
+                                    {{ report.detected_objects }}
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if report.cheating_detected %}
+                                    <span class="badge badge-danger">⚠️ Suspicious</span>
+                                {% else %}
+                                    <span class="badge badge-success">✓ Clean</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if report.has_images %}📸{% endif %}
+                                {% if report.has_audio %}🎤{% endif %}
+                                {% if not report.has_images and not report.has_audio %}-{% endif %}
+                            </td>
+                            <td>
+                                <a href="{% url 'report_page' report.student.id %}" class="btn">View Report</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <div class="empty-state">📭 No proctoring data available yet</div>
+            {% endif %}
+        </div>
     </div>
 </body>
 </html>

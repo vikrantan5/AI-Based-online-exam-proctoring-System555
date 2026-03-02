@@ -110,13 +110,22 @@ def take_exam(request, attempt_id):
     from .models import CheatingEvent
     violations = CheatingEvent.objects.filter(student=request.user.student).first()
     tab_count = violations.tab_switch_count if violations else 0
+
+      
+    # Start background processing threads for video and audio monitoring (ML Proctoring)
+    import threading
+    from .views import stop_event, background_processing, process_audio, warning
+    stop_event.clear()  # Reset the stop event flag
+    threading.Thread(target=background_processing, args=(request,), daemon=True).start()
+    threading.Thread(target=process_audio, args=(request,), daemon=True).start()
     
     context = {
         'attempt': attempt,
         'exam_paper': attempt.exam_paper,
         'questions': questions_data,
         'tab_count': tab_count,
-        'warning': None,
+        # 'warning': None,
+        'warning': warning,
     }
     
     return render(request, 'student/take_exam.html', context)
