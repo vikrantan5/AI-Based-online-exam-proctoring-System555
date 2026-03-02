@@ -13,10 +13,13 @@ from .models import (
 )
 from django.contrib.auth.models import User
 import json
+import logging
 
 # Import email and Groq services
 from .email_service import send_result_published_email, send_approval_email, send_rejection_email
 from .groq_service import get_groq_service
+
+logger = logging.getLogger(__name__)
 
 
 @staff_member_required(login_url='/admin/login/')
@@ -396,41 +399,71 @@ def evaluate_subjective_answers(request, attempt_id):
     
     if request.method == 'POST':
         action = request.POST.get('action')
+        logger.info(f"Evaluation action triggered: {action} for attempt {attempt_id}")
         
         if action == 'auto_evaluate':
             # Auto-evaluate using Groq AI service
-            groq_service = get_groq_service()
-            for answer in subjective_answers:
-                if not answer.answer_text:
-                    answer.marks_obtained = 0
-                    answer.ai_feedback = "No answer provided"
-                    answer.save()
-                    continue
+            try:
+                groq_service = get_groq_service()
+                logger.info(f"Groq service initialized successfully")
                 
-                try:
-                    # Call Groq service for evaluation
-                    evaluation = groq_service.evaluate_subjective_answer(
-                        question_text=answer.question.question_text,
-                        model_answer=answer.question.model_answer,
-                        student_answer=answer.answer_text,
-                        max_marks=answer.question.marks
-                    )
+                evaluated_count = 0
+                error_count = 0
+                
+                for answer in subjective_answers:
+                    if not answer.answer_text:
+                        answer.marks_obtained = 0
+                        answer.ai_feedback = "No answer provided"
+                        answer.evaluated_by = request.user
+                        answer.evaluated_at = timezone.now()
+                        answer.save()
+                        logger.info(f"Answer {answer.id}: No text provided")
+                        continue
                     
-                    answer.marks_obtained = evaluation['marks']
-                    answer.ai_feedback = evaluation['feedback']
-                    answer.evaluated_by = request.user
-                    answer.evaluated_at = timezone.now()
-                    answer.save()
+                    try:
+                        logger.info(f"Evaluating answer {answer.id} for question: {answer.question.question_text[:50]}...")
+                        
+                        # Call Groq service for evaluation
+                        evaluation = groq_service.evaluate_subjective_answer(
+                            question_text=answer.question.question_text,
+                            model_answer=answer.question.model_answer,
+                            student_answer=answer.answer_text,
+                            max_marks=answer.question.marks
+                        )
+                        
+                        logger.info(f"Groq evaluation result: marks={evaluation['marks']}, feedback_length={len(evaluation['feedback'])}")
+                        
+                        answer.marks_obtained = evaluation['marks']
+                        answer.ai_feedback = evaluation['feedback']
+                        answer.evaluated_by = request.user
+                        answer.evaluated_at = timezone.now()
+                        answer.save()
+                        
+                        evaluated_count += 1
+                        logger.info(f"Answer {answer.id} evaluated successfully: {evaluation['marks']}/{answer.question.marks} marks")
+                        
+                    except Exception as e:
+                        error_count += 1
+                        error_msg = f"Error during AI evaluation: {str(e)}"
+                        logger.error(f"Answer {answer.id} evaluation failed: {error_msg}")
+                        answer.ai_feedback = error_msg
+                        answer.marks_obtained = 0
+                        answer.evaluated_by = request.user
+                        answer.evaluated_at = timezone.now()
+                        answer.save()
+                
+                if error_count > 0:
+                    messages.warning(request, f"⚠️ {evaluated_count} answers evaluated successfully, {error_count} failed. Check console for errors.")
+                else:
+                    messages.success(request, f"✅ Subjective answers auto-evaluated successfully using Groq AI! ({evaluated_count} answers)")
                     
-                except Exception as e:
-                    answer.ai_feedback = f"Error during AI evaluation: {str(e)}"
-                    answer.marks_obtained = 0
-                    answer.save()
-            
-            messages.success(request, "Subjective answers auto-evaluated successfully using Groq AI!")
+            except Exception as e:
+                logger.error(f"Failed to initialize Groq service: {str(e)}")
+                messages.error(request, f"❌ Failed to initialize Groq AI service: {str(e)}")
             
         elif action == 'manual_save':
             # Manual override
+            saved_count = 0
             for answer in subjective_answers:
                 marks_key = f'marks_{answer.id}'
                 feedback_key = f'feedback_{answer.id}'
@@ -442,15 +475,18 @@ def evaluate_subjective_answers(request, attempt_id):
                     answer.evaluated_by = request.user
                     answer.evaluated_at = timezone.now()
                     answer.save()
+                    saved_count += 1
             
-            messages.success(request, "Manual evaluation saved successfully!")
+            messages.success(request, f"✅ Manual evaluation saved successfully! ({saved_count} answers)")
         
-        # Calculate total marks
+        # Calculate total marks (include both MCQ and subjective)
         total_marks_obtained = attempt.answers.aggregate(Sum('marks_obtained'))['marks_obtained__sum'] or 0
         attempt.total_marks_obtained = total_marks_obtained
         attempt.percentage = (total_marks_obtained / attempt.exam_paper.total_marks * 100) if attempt.exam_paper.total_marks > 0 else 0
         attempt.status = 'evaluated'
         attempt.save()
+        
+        logger.info(f"Attempt {attempt_id} total marks: {total_marks_obtained}/{attempt.exam_paper.total_marks} ({attempt.percentage}%)")
         
         return redirect('publish_result', attempt_id=attempt.id)
     
@@ -490,23 +526,37 @@ def results_management(request):
 
 
 
-
 @staff_member_required(login_url='/admin/login/')
 def publish_result(request, attempt_id):
     """Publish a single result for a student attempt"""
     attempt = get_object_or_404(StudentExamAttempt, id=attempt_id)
     
     if request.method == 'POST':
+        # Calculate grade based on percentage
+        percentage = attempt.percentage or 0
+        if percentage >= 90:
+            grade = 'A+'
+        elif percentage >= 80:
+            grade = 'A'
+        elif percentage >= 70:
+            grade = 'B+'
+        elif percentage >= 60:
+            grade = 'B'
+        elif percentage >= 50:
+            grade = 'C+'
+        elif percentage >= 40:
+            grade = 'C'
+        else:
+            grade = 'F'
+        
         # Check if result already exists
         result, created = Result.objects.get_or_create(
             attempt=attempt,
             defaults={
-                'student': attempt.student,
-                'exam_paper': attempt.exam_paper,
-                'total_marks': attempt.total_marks_obtained or 0,
-                'max_marks': attempt.exam_paper.total_marks,
-                'percentage': attempt.percentage or 0,
-                'passed': (attempt.percentage or 0) >= (attempt.exam_paper.passing_marks or 40),
+                'total_marks': attempt.exam_paper.total_marks,
+                'marks_obtained': attempt.total_marks_obtained or 0,
+                'percentage': percentage,
+                'grade': grade,
                 'published_by': request.user,
                 'published_at': timezone.now(),
                 'published': True
@@ -515,10 +565,10 @@ def publish_result(request, attempt_id):
         
         if not created:
             # Update existing result
-            result.total_marks = attempt.total_marks_obtained or 0
-            result.max_marks = attempt.exam_paper.total_marks
-            result.percentage = attempt.percentage or 0
-            result.passed = (attempt.percentage or 0) >= (attempt.exam_paper.passing_marks or 40)
+            result.total_marks = attempt.exam_paper.total_marks
+            result.marks_obtained = attempt.total_marks_obtained or 0
+            result.percentage = percentage
+            result.grade = grade
             result.published_by = request.user
             result.published_at = timezone.now()
             result.published = True
@@ -527,12 +577,16 @@ def publish_result(request, attempt_id):
         # Send email notification if email service is available
         try:
             from .email_service import send_result_published_email
-            email_sent = send_result_published_email(attempt.student, attempt, result)
+            email_sent = send_result_published_email(attempt.student, result, attempt)
             if email_sent:
+                result.email_sent = True
+                result.email_sent_at = timezone.now()
+                result.save()
                 messages.success(request, f"Result for {attempt.student.name} published and email notification sent!")
             else:
                 messages.success(request, f"Result for {attempt.student.name} published! (Email notification failed)")
-        except ImportError:
+        except Exception as e:
+            logger.error(f"Email sending failed: {str(e)}")
             messages.success(request, f"Result for {attempt.student.name} published successfully!")
         
         return redirect('results_management')

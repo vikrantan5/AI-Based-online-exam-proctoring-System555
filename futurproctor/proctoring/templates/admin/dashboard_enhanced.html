@@ -298,8 +298,8 @@
                         <tr>
                             <th>Student Name</th>
                             <th>Latest Exam</th>
-                            <th>Tab Switches</th>
-                            <th>Detected Objects</th>
+                            <!-- <th>Tab Switches</th> -->
+                            <!-- <th>Detected Objects</th> -->
                             <th>Status</th>
                             <th>Evidence</th>
                             <th>Action</th>
@@ -310,20 +310,20 @@
                         <tr>
                             <td>{{ report.student.name }}</td>
                             <td>{{ report.latest_exam }}</td>
-                            <td>
+                            <!-- <td>
                                 {% if report.tab_switches > 0 %}
                                     <span style="color: #dc3545; font-weight: bold;">{{ report.tab_switches }}</span>
                                 {% else %}
                                     {{ report.tab_switches }}
                                 {% endif %}
-                            </td>
-                            <td>
+                            </td> -->
+                            <!-- <td>
                                 {% if report.detected_objects != "None" %}
                                     <span style="color: #dc3545;">{{ report.detected_objects }}</span>
                                 {% else %}
                                     {{ report.detected_objects }}
                                 {% endif %}
-                            </td>
+                            </td> -->
                             <td>
                                 {% if report.cheating_detected %}
                                     <span class="badge badge-danger">⚠️ Suspicious</span>

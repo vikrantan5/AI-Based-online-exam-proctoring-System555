@@ -33,6 +33,7 @@ class GroqEvaluationService:
             }
         """
         try:
+            logger.info(f"Starting Groq evaluation for question (max_marks={max_marks})")
             # Create a comprehensive prompt for evaluation
             prompt = f"""You are an expert examiner evaluating a student's answer. Please evaluate the following answer objectively and fairly.
 
@@ -103,8 +104,8 @@ Be fair, objective, and constructive in your evaluation."""
     def _extract_marks(self, response_text, max_marks):
         """Extract marks from the AI response"""
         try:
-            # Look for "MARKS:" pattern
-            lines = response_text.split('')
+            # Look for \"MARKS:\" pattern
+            lines = response_text.split(' ')
             for line in lines:
                 if 'MARKS:' in line.upper():
                     # Extract the number
@@ -127,6 +128,10 @@ Be fair, objective, and constructive in your evaluation."""
                     return min(marks, max_marks)
             
             # If no marks found, return 0
+            return 0
+            
+        except Exception as e:
+            logger.error(f"Failed to extract marks from response: {str(e)}")
             return 0
             
         except Exception as e:

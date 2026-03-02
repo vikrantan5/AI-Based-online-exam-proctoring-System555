@@ -1,8 +1,20 @@
-{% extends "admin/base_site.html" %}
+{% extends "admin/base_admin.html" %}
+
+{% block title %}Publish Result - FuturProctor Admin{% endblock %}
 
 {% block content %}
 <div class="container-fluid">
-    <h1>Publish Result</h1>
+    <h1>📊 Publish Result</h1>
+    
+    <!-- {% if messages %}
+    <div style="margin-bottom: 20px;">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %} -->
     
     <div class="card">
         <div class="card-body">
@@ -22,14 +34,20 @@
             
             <form method="post" class="mt-4">
                 {% csrf_token %}
-                <p>Are you sure you want to publish this result? The student will be notified via email.</p>
+                <p style="background: #fff3cd; padding: 15px; border-radius: 5px; border-left: 4px solid #ffc107;">
+                    ⚠️ Are you sure you want to publish this result? The student will be notified via email.
+                </p>
                 
                 <div class="form-group">
-                    <button type="submit" class="btn btn-success">Yes, Publish Result</button>
-                    <a href="{% url 'results_management' %}" class="btn btn-secondary">Cancel</a>
+                    <button type="submit" class="btn btn-success">✅ Yes, Publish Result</button>
+                    <a href="{% url 'results_management' %}" class="btn btn-secondary">❌ Cancel</a>
                 </div>
             </form>
         </div>
+    </div>
+    
+    <div style="margin-top: 20px;">
+        <a href="{% url 'admin_dashboard_enhanced' %}" class="btn">🏠 Back to Dashboard</a>
     </div>
 </div>
 {% endblock %}
