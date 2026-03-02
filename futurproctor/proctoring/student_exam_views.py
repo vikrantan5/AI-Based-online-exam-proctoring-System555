@@ -33,8 +33,8 @@ def available_exams(request):
     """Show all available exams to approved students"""
     student = request.user.student
     
-   # Get all published and active exams
-    all_exams = ExamPaper.objects.filter(is_active=True, published=True).order_by('exam_date')
+    # Get all active exams (is_active controls visibility to students)
+    all_exams = ExamPaper.objects.filter(is_active=True).order_by('exam_date')
     
     # Get student's attempts
     attempted_exam_ids = StudentExamAttempt.objects.filter(
