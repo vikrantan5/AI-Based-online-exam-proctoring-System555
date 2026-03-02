@@ -104,34 +104,43 @@ Be fair, objective, and constructive in your evaluation."""
     def _extract_marks(self, response_text, max_marks):
         """Extract marks from the AI response"""
         try:
-            # Look for \"MARKS:\" pattern
-            lines = response_text.split(' ')
+            import re
+            
+            # Look for "MARKS:" pattern - split by newline, not space
+            lines = response_text.split('\n')
             for line in lines:
                 if 'MARKS:' in line.upper():
                     # Extract the number
-                    marks_str = line.split(':')[1].strip()
+                    marks_str = line.split(':', 1)[1].strip()
+                    
                     # Handle formats like "8/10" or "8 out of 10" or just "8"
                     if '/' in marks_str:
                         marks = float(marks_str.split('/')[0].strip())
                     elif 'out of' in marks_str.lower():
                         marks = float(marks_str.split('out of')[0].strip())
                     else:
-                        # Try to extract just the number
-                        import re
-                        numbers = re.findall(r'd+.?d*', marks_str)
+                        # Try to extract just the number - FIXED REGEX
+                        numbers = re.findall(r'\d+\.?\d*', marks_str)
                         if numbers:
                             marks = float(numbers[0])
                         else:
                             marks = 0
                     
                     # Ensure marks don't exceed max_marks
-                    return min(marks, max_marks)
+                    marks = max(0, min(marks, max_marks))
+                    logger.info(f"Extracted marks: {marks}/{max_marks}")
+                    return marks
+            
+            # If no marks found in MARKS: pattern, try to extract first number
+            logger.warning("No MARKS: pattern found, trying to extract first number")
+            numbers = re.findall(r'\d+\.?\d*', response_text)
+            if numbers:
+                marks = max(0, min(float(numbers[0]), max_marks))
+                logger.info(f"Extracted marks from first number: {marks}/{max_marks}")
+                return marks
             
             # If no marks found, return 0
-            return 0
-            
-        except Exception as e:
-            logger.error(f"Failed to extract marks from response: {str(e)}")
+            logger.warning("No marks found in response, returning 0")
             return 0
             
         except Exception as e:

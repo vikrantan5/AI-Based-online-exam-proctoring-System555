@@ -624,3 +624,34 @@ def publish_result(request, attempt_id):
     }
     
     return render(request, 'admin/publish_result_confirm.html', context)
+
+
+
+
+@staff_member_required(login_url='/admin/login/')
+def publish_exam(request, exam_id):
+    """Publish an exam to make it visible to students"""
+    exam_paper = get_object_or_404(ExamPaper, id=exam_id)
+    
+    # Check if exam has questions
+    if exam_paper.questions.count() == 0:
+        messages.error(request, "Cannot publish exam without questions!")
+        return redirect('exam_paper_detail', exam_id=exam_id)
+    
+    exam_paper.published = True
+    exam_paper.save()
+    
+    messages.success(request, f"Exam '{exam_paper.title}' has been published! Students can now see it.")
+    return redirect('exam_paper_detail', exam_id=exam_id)
+
+
+@staff_member_required(login_url='/admin/login/')
+def unpublish_exam(request, exam_id):
+    """Unpublish an exam to hide it from students"""
+    exam_paper = get_object_or_404(ExamPaper, id=exam_id)
+    
+    exam_paper.published = False
+    exam_paper.save()
+    
+    messages.warning(request, f"Exam '{exam_paper.title}' has been unpublished. Students cannot see it now.")
+    return redirect('exam_paper_detail', exam_id=exam_id)
