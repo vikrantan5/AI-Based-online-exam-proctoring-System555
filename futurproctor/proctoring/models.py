@@ -8,15 +8,20 @@ from django.utils import timezone
 import pytz
 from datetime import datetime  
 
-# Define Nepal Time Zone
-NEPAL_TZ = pytz.timezone('Asia/Kathmandu')
+# Define Indian Standard Time Zone
+IST_TZ = pytz.timezone('Asia/Kolkata')
 
-# Helper function to get Nepal time
-def get_nepal_time():
-    return timezone.now().astimezone(NEPAL_TZ)
+# Helper function to get IST time
+def get_ist_time():
+    return timezone.now().astimezone(IST_TZ)
 
-def get_nepal_time_str():
-    return get_nepal_time().strftime('%Y-%m-%d %I:%M:%S %p %Z')
+def get_ist_time_str():
+    return get_ist_time().strftime('%Y-%m-%d %I:%M:%S %p %Z')
+
+# Backward compatibility alias for old migrations
+# Old migrations reference get_nepal_time, so we keep it as an alias
+get_nepal_time = get_ist_time
+get_nepal_time_str = get_ist_time_str
 
 class Student(models.Model):
     APPROVAL_STATUS_CHOICES = [

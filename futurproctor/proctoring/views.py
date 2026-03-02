@@ -63,15 +63,23 @@ import pytz  # For timezone handling
 from datetime import datetime  # Standard date and time handling
 
 # Define Nepal Time Zone
-NEPAL_TZ = pytz.timezone('Asia/Kathmandu')
+# Fix: Proper datetime handling for Indian Standard Time Zone (Asia/Kolkata)
+import pytz  # For timezone handling
+from datetime import datetime  # Standard date and time handling
 
-# Function to get Nepal's current time
-def get_nepal_time():
+# Define Indian Standard Time Zone
+IST_TZ = pytz.timezone('Asia/Kolkata')
+
+# Function to get IST current time
+def get_ist_time():
     """
-    Returns the current time in Nepal's timezone.
+    Returns the current time in IST timezone.
     This ensures all timestamps are consistent with the local time.
     """
-    return datetime.now(NEPAL_TZ)
+    return datetime.now(IST_TZ)
+
+# Backward compatibility alias for old code/migrations
+get_nepal_time = get_ist_time
 
 
 # Home page view
@@ -345,15 +353,21 @@ def dashboard(request):
 from django.utils import timezone
 import pytz
 
-# Define Nepal Time Zone
-NEPAL_TZ = pytz.timezone('Asia/Kathmandu')
+# Define Indian Standard Time Zone
+IST_TZ = pytz.timezone('Asia/Kolkata')
+# Backward compatibility: Keep old timezone variable name for migrations
+NEPAL_TZ = IST_TZ  # Now points to IST instead of Nepal time
 
-# Helper function to get Nepal time
-def get_nepal_time():
-    return timezone.now().astimezone(NEPAL_TZ)
+# Helper function to get IST time
+def get_ist_time():
+    return timezone.now().astimezone(IST_TZ)
 
-def get_nepal_time_str():
-    return get_nepal_time().strftime('%Y-%m-%d %I:%M:%S %p %Z')
+def get_ist_time_str():
+    return get_ist_time().strftime('%Y-%m-%d %I:%M:%S %p %Z')
+
+# Backward compatibility alias for old code
+get_nepal_time = get_ist_time
+get_nepal_time_str = get_ist_time_str
 
 
 logger = logging.getLogger(__name__)

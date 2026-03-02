@@ -31,7 +31,7 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-z_+&zcw%md$8ai@dpaaje
 DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '*').split(',')
 
 
 # Application definition
@@ -49,6 +49,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',  # Add WhiteNoise for static files
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -119,7 +120,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Asia/Kolkata'
 
 USE_I18N = True
 
@@ -137,17 +138,12 @@ STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 STATIC_URL = '/static/'
-STATICFILES_DIRS = [BASE_DIR / 'static']
-
-MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
-
-MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
 
 
-# settings.py
-import os
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+STATICFILES_DIRS = [BASE_DIR / 'static'] if os.path.exists(BASE_DIR / 'static') else []
+
+
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
@@ -171,6 +167,6 @@ GROQ_API_KEY = os.environ.get('GROQ_API_KEY', '')
 
 
 
-TIME_ZONE = 'UTC'
-USE_TZ = True
+# TIME_ZONE = 'UTC'
+# USE_TZ = True
 
