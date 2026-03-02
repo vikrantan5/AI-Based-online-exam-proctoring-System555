@@ -34,16 +34,34 @@ def admin_dashboard_enhanced(request):
     
     total_exams = ExamPaper.objects.count()
     active_exams = ExamPaper.objects.filter(is_active=True).count()
+    published_exams = ExamPaper.objects.filter(published=True).count()
+    draft_exams = ExamPaper.objects.filter(published=False).count()
     
     total_attempts = StudentExamAttempt.objects.count()
     pending_evaluations = StudentExamAttempt.objects.filter(status='submitted').count()
     evaluated_attempts = StudentExamAttempt.objects.filter(status='evaluated').count()
     
-    # Upcoming exams
-    upcoming_exams = ExamPaper.objects.filter(
-        exam_date__gte=timezone.now(),
-        is_active=True
-    ).order_by('exam_date')[:5]
+     # Classify exams by status
+    now = timezone.now()
+    all_published_exams = ExamPaper.objects.filter(published=True)
+    
+    upcoming_exams = []
+    live_exams = []
+    closed_exams = []
+    
+    for exam in all_published_exams:
+        exam_end_time = exam.exam_date + timezone.timedelta(minutes=exam.duration_minutes)
+        if now < exam.exam_date:
+            upcoming_exams.append(exam)
+        elif exam.exam_date <= now <= exam_end_time:
+            live_exams.append(exam)
+        else:
+            closed_exams.append(exam)
+    
+    # Sort by date
+    upcoming_exams = sorted(upcoming_exams, key=lambda x: x.exam_date)[:5]
+    live_exams = sorted(live_exams, key=lambda x: x.exam_date, reverse=True)[:5]
+    closed_exams = sorted(closed_exams, key=lambda x: x.exam_date, reverse=True)[:5]
     
     # Recent submissions needing evaluation
     pending_subjective = StudentExamAttempt.objects.filter(
@@ -119,10 +137,14 @@ def admin_dashboard_enhanced(request):
         'rejected_students': rejected_students,
         'total_exams': total_exams,
         'active_exams': active_exams,
+        'published_exams': published_exams,
+        'draft_exams': draft_exams,
         'total_attempts': total_attempts,
         'pending_evaluations': pending_evaluations,
         'evaluated_attempts': evaluated_attempts,
         'upcoming_exams': upcoming_exams,
+        'live_exams': live_exams,
+        'closed_exams': closed_exams,
         'pending_subjective': pending_subjective,
         'pending_students': pending_students,
         'proctoring_reports': proctoring_reports,  # ML Proctoring data

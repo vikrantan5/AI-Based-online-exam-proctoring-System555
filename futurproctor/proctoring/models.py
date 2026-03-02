@@ -111,12 +111,38 @@ class ExamPaper(models.Model):
     total_marks = models.IntegerField(default=0, help_text="Total marks for the exam")
     passing_marks = models.IntegerField(default=0, help_text="Minimum marks to pass")
     is_active = models.BooleanField(default=True, help_text="Is exam available for students")
+    published = models.BooleanField(default=False, help_text="Is exam published and visible to students")
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='created_exams')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return f"{self.title} - {self.subject}"
+    @property
+    def exam_status(self):
+        """Get current exam status based on date and time"""
+        now = timezone.now()
+        exam_end_time = self.exam_date + timezone.timedelta(minutes=self.duration_minutes)
+        
+        if not self.published:
+            return 'draft'
+        elif now < self.exam_date:
+            return 'upcoming'
+        elif self.exam_date <= now <= exam_end_time:
+            return 'live'
+        else:
+            return 'closed'
+    
+    @property
+    def exam_status_display(self):
+        """Get human-readable exam status"""
+        status_map = {
+            'draft': 'Draft',
+            'upcoming': 'Upcoming',
+            'live': 'Live',
+            'closed': 'Closed'
+        }
+        return status_map.get(self.exam_status, 'Unknown')
 
     class Meta:
         ordering = ['-created_at']

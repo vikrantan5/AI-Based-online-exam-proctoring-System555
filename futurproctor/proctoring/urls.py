@@ -99,6 +99,8 @@ urlpatterns = [
     path('admin/exams/create/', admin_views.exam_paper_create, name='exam_paper_create'),
     path('admin/exams/<int:exam_id>/', admin_views.exam_paper_detail, name='exam_paper_detail'),
     path('admin/exams/<int:exam_id>/edit/', admin_views.exam_paper_edit, name='exam_paper_edit'),
+    path('admin/exams/<int:exam_id>/publish/', admin_views.publish_exam, name='publish_exam'),
+    path('admin/exams/<int:exam_id>/unpublish/', admin_views.unpublish_exam, name='unpublish_exam'),
     
     # Question Management URLs
     path('admin/exams/<int:exam_id>/questions/create/', admin_views.question_create, name='question_create'),
@@ -117,6 +119,7 @@ urlpatterns = [
     path('student/exams/<int:exam_id>/start/', student_exam_views.start_exam, name='start_exam'),
     path('student/exams/attempt/<int:attempt_id>/', student_exam_views.take_exam, name='take_exam'),
     path('student/exams/attempt/<int:attempt_id>/submit/', student_exam_views.submit_exam_new, name='submit_exam_new'),
+
     path('student/exams/submission-success/', student_exam_views.exam_submission_success_new, name='exam_submission_success_new'),
     path('student/results/', student_exam_views.student_results, name='student_results'),
     path('student/results/<int:result_id>/', student_exam_views.result_detail, name='result_detail'),
