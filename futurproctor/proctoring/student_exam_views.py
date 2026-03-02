@@ -30,21 +30,52 @@ def student_approval_check(view_func):
 @login_required
 @student_approval_check
 def available_exams(request):
-    """Show all available exams to approved students"""
+    """Show all available exams categorized by status: Upcoming, Live, Completed"""
     student = request.user.student
+    now = timezone.now()
     
-    # Get all active exams (is_active controls visibility to students)
-    all_exams = ExamPaper.objects.filter(is_active=True).order_by('exam_date')
+    # Get all active and published exams
+    all_exams = ExamPaper.objects.filter(is_active=True, published=True).order_by('exam_date')
     
     # Get student's attempts
     attempted_exam_ids = StudentExamAttempt.objects.filter(
         student=student
     ).values_list('exam_paper_id', flat=True).distinct()
     
+    # Categorize exams into upcoming, live, and completed
+    upcoming_exams = []
+    live_exams = []
+    completed_exams = []
+    
+    for exam in all_exams:
+        exam_end_time = exam.exam_date + timezone.timedelta(minutes=exam.duration_minutes)
+        
+        # Check if student has already attempted
+        has_attempted = exam.id in attempted_exam_ids
+        
+        # Add exam status info
+        exam.has_attempted = has_attempted
+        exam.end_time = exam_end_time
+        
+        if now < exam.exam_date:
+            # Exam hasn't started yet - UPCOMING
+            exam.time_until_start = exam.exam_date - now
+            upcoming_exams.append(exam)
+        elif exam.exam_date <= now <= exam_end_time:
+            # Exam is currently active - LIVE
+            exam.time_remaining = exam_end_time - now
+            live_exams.append(exam)
+        else:
+            # Exam has ended - COMPLETED
+            completed_exams.append(exam)
+    
     context = {
-        'all_exams': all_exams,
+        'upcoming_exams': upcoming_exams,
+        'live_exams': live_exams,
+        'completed_exams': completed_exams,
         'attempted_exam_ids': attempted_exam_ids,
         'student': student,
+        'now': now,
     }
     
     return render(request, 'student/available_exams.html', context)
@@ -53,17 +84,57 @@ def available_exams(request):
 @login_required
 @student_approval_check
 def start_exam(request, exam_id):
-    """Start a new exam attempt"""
+    """Start a new exam attempt with time-based validation"""
     student = request.user.student
-    exam_paper = get_object_or_404(ExamPaper, id=exam_id, is_active=True)
+    exam_paper = get_object_or_404(ExamPaper, id=exam_id, is_active=True, published=True)
     
-    # Create new attempt
+    # TIME-BASED VALIDATION - Critical Security Check
+    now = timezone.now()
+    exam_end_time = exam_paper.exam_date + timezone.timedelta(minutes=exam_paper.duration_minutes)
+    
+    # Check if exam is in valid time window
+    if now < exam_paper.exam_date:
+        # Exam hasn't started yet
+        time_until_start = exam_paper.exam_date - now
+        days = time_until_start.days
+        hours, remainder = divmod(time_until_start.seconds, 3600)
+        minutes, seconds = divmod(remainder, 60)
+        
+        messages.error(
+            request, 
+            f"This exam is scheduled for {exam_paper.exam_date.strftime('%B %d, %Y at %I:%M %p')}. "
+            f"You can attempt it only when it becomes active. "
+            f"Time remaining: {days}d {hours}h {minutes}m {seconds}s"
+        )
+        return redirect('available_exams')
+    
+    if now > exam_end_time:
+        # Exam has already ended
+        messages.error(
+            request, 
+            f"This exam ended on {exam_end_time.strftime('%B %d, %Y at %I:%M %p')}. "
+            "You can no longer attempt this exam."
+        )
+        return redirect('available_exams')
+    
+    # Check if student has already attempted this exam
+    existing_attempt = StudentExamAttempt.objects.filter(
+        student=student,
+        exam_paper=exam_paper
+    ).first()
+    
+    if existing_attempt:
+        messages.warning(request, "You have already attempted this exam.")
+        return redirect('available_exams')
+    
+    # All checks passed - Create new attempt
     attempt = StudentExamAttempt.objects.create(
         student=student,
         exam_paper=exam_paper,
         status='ongoing'
     )
     
+    messages.success(request, f"Exam '{exam_paper.title}' started successfully!")
     return redirect('take_exam', attempt_id=attempt.id)
 
 
@@ -251,8 +322,9 @@ def result_detail(request, result_id):
 
 @login_required
 def student_dashboard_enhanced(request):
-    """Enhanced student dashboard with approval status and results"""
+    """Enhanced student dashboard with approval status, categorized exams, and results"""
     student = request.user.student
+    now = timezone.now()
     
     # Get approval status
     approval_status = student.approval_status
@@ -270,11 +342,34 @@ def student_dashboard_enhanced(request):
         published=True
     ).select_related('attempt__exam_paper').order_by('-published_at')[:5]
     
-    # Get available exams
-    available_exams_count = ExamPaper.objects.filter(
+    # Get categorized exams (Upcoming, Live, Completed)
+    all_exams = ExamPaper.objects.filter(
         is_active=True,
-        exam_date__gte=timezone.now()
-    ).count()
+        published=True
+    ).order_by('exam_date')
+    
+    attempted_exam_ids = StudentExamAttempt.objects.filter(
+        student=student
+    ).values_list('exam_paper_id', flat=True).distinct()
+    
+    upcoming_exams = []
+    live_exams = []
+    
+    for exam in all_exams:
+        exam_end_time = exam.exam_date + timezone.timedelta(minutes=exam.duration_minutes)
+        has_attempted = exam.id in attempted_exam_ids
+        
+        if now < exam.exam_date and not has_attempted:
+            # Upcoming exam
+            exam.time_until_start = exam.exam_date - now
+            upcoming_exams.append(exam)
+        elif exam.exam_date <= now <= exam_end_time and not has_attempted:
+            # Live exam
+            exam.time_remaining = exam_end_time - now
+            live_exams.append(exam)
+    
+    upcoming_exams_count = len(upcoming_exams)
+    live_exams_count = len(live_exams)
     
     context = {
         'student': student,
@@ -282,7 +377,11 @@ def student_dashboard_enhanced(request):
         'total_attempts': total_attempts,
         'completed_exams': completed_exams,
         'recent_results': recent_results,
-        'available_exams_count': available_exams_count,
+        'upcoming_exams_count': upcoming_exams_count,
+        'live_exams_count': live_exams_count,
+        'upcoming_exams': upcoming_exams[:3],  # Show top 3
+        'live_exams': live_exams[:3],  # Show top 3
+        'now': now,
     }
     
     return render(request, 'student/dashboard_enhanced.html', context)
