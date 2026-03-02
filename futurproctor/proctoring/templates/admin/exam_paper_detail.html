@@ -132,10 +132,39 @@
         .btn-edit:hover { background: #e0a800; }
         .btn-delete { background: #dc3545; }
         .btn-delete:hover { background: #c82333; }
+          .btn-publish { background: #28a745; font-size: 16px; }
+        .btn-publish:hover { background: #218838; }
+        .btn-unpublish { background: #ffc107; color: #000; font-size: 16px; }
+        .btn-unpublish:hover { background: #e0a800; }
         .empty-state {
             text-align: center;
             padding: 60px 20px;
             color: #999;
+        }
+         .publish-status-banner {
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            text-align: center;
+            font-size: 18px;
+            font-weight: 600;
+            border: 3px solid;
+        }
+        .status-published {
+            background: #d4edda;
+            color: #155724;
+            border-color: #28a745;
+        }
+        .status-draft {
+            background: #fff3cd;
+            color: #856404;
+            border-color: #ffc107;
+        }
+        .publish-actions {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
         }
     </style>
 </head>
@@ -146,11 +175,51 @@
                 <h1>{{ exam_paper.title }}</h1>
                 <p style="color: #666;">{{ exam_paper.subject }}</p>
             </div>
-            <div>
+            <div class="publish-actions"></div>
                 <a href="{% url 'exam_paper_list' %}" class="btn">← Back</a>
                 <a href="{% url 'exam_paper_edit' exam_paper.id %}" class="btn">Edit Exam</a>
                 <a href="{% url 'question_create' exam_paper.id %}" class="btn btn-success">➕ Add Question</a>
             </div>
+        </div>
+         <!-- PUBLISH STATUS BANNER -->
+        {% if exam_paper.published %}
+        <div class="publish-status-banner status-published">
+            ✅ <strong>PUBLISHED</strong> - This exam is visible to students
+        </div>
+        {% else %}
+        <div class="publish-status-banner status-draft">
+            📝 <strong>DRAFT</strong> - This exam is NOT visible to students
+        </div>
+        {% endif %}
+
+        <!-- PUBLISH/UNPUBLISH ACTIONS -->
+        <div style="margin-bottom: 20px; text-align: center;">
+            {% if exam_paper.published %}
+                <form method="post" action="{% url 'unpublish_exam' exam_paper.id %}" style="display: inline;" 
+                      onsubmit="return confirm('Are you sure you want to unpublish this exam? Students will no longer see it.');">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-unpublish" style="padding: 15px 40px;">
+                        🔒 Unpublish Exam
+                    </button>
+                </form>
+            {% else %}
+                {% if questions.count == 0 %}
+                    <button class="btn btn-disabled" disabled style="padding: 15px 40px; font-size: 16px;">
+                        ❌ Cannot Publish (No Questions)
+                    </button>
+                    <p style="color: #dc3545; margin-top: 10px; font-weight: 600;">
+                        Please add at least one question before publishing this exam
+                    </p>
+                {% else %}
+                    <form method="post" action="{% url 'publish_exam' exam_paper.id %}" style="display: inline;" 
+                          onsubmit="return confirm('Are you sure you want to publish this exam? Students will be able to see and attempt it.');">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-publish" style="padding: 15px 40px;">
+                            🚀 Publish Exam
+                        </button>
+                    </form>
+                {% endif %}
+            {% endif %}
         </div>
 
         <div class="info-section">
@@ -178,6 +247,16 @@
                 <div class="info-item">
                     <div class="info-label">Status</div>
                     <div class="info-value">{% if exam_paper.is_active %}✓ Active{% else %}✗ Inactive{% endif %}</div>
+                </div>
+                 <div class="info-item">
+                    <div class="info-label">Published</div>
+                    <div class="info-value" style="color: {% if exam_paper.published %}#28a745{% else %}#ffc107{% endif %};">
+                        {% if exam_paper.published %}✓ Yes{% else %}✗ No{% endif %}
+                    </div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Exam Status</div>
+                    <div class="info-value" style="color: #667eea;">{{ exam_paper.exam_status_display }}</div>
                 </div>
             </div>
             {% if exam_paper.instructions %}
