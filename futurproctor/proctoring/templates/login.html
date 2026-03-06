@@ -3,140 +3,193 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Student Login with Face Recognition</title>
+    <title>Student Login - FuturProctor</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
+        :root {
+            --primary: #4F46E5;
+            --primary-dark: #4338CA;
+            --surface: #FFFFFF;
+            --background: #F9FAFB;
+            --border: #E5E7EB;
+            --text: #111827;
+            --text-muted: #6B7280;
+        }
+        
         body {
-            background-color: #f8f9fa;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             display: flex;
-            flex-direction: column;
-            justify-content: center;
             align-items: center;
+            justify-content: center;
+            font-family: 'Inter', sans-serif;
             margin: 0;
-            padding: 0;
+            padding: 20px;
         }
+        
         .modal-content {
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-            width: 90vw;
-            height: 90vh;
-            border-radius: 10px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+            border-radius: 20px;
+            border: none;
+            max-width: 900px;
+            margin: auto;
         }
+        
         .modal-title {
             text-align: center;
             width: 100%;
-            background-color: #0d6efd;
+            background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);
             color: white;
             font-size: 1.5rem;
-            padding: 10px 0;
-            border-radius: 10px 10px 0 0;
+            font-weight: 700;
+            padding: 20px;
+            border-radius: 20px 20px 0 0;
+            margin: 0;
         }
+        
         #loginModal {
             display: block;
-            width: 90vw;
-            height: 90vh;
         }
-        #webcam-stream {
-            max-width: 300px;
-            max-height: 280px;
-            object-fit: cover;
-            border-radius: 10px;
-        }
-        .modal-body {
-            padding: 15px;
-            height: calc(80vh - 120px);
-            overflow-y: auto;
-        }
-        .card {
-            margin-top: 10px;
-            border: 2px solid #0d6efd;
-            border-radius: 8px;
-        }
-        .captured-photo {
-            display: none;
-            margin-top: 10px;
-        }
-        .captured-photo img {
-            width: 100%;
-            border-radius: 5px;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-        }
-        .btn-info {
-            background-color: #0d6efd;
-            border-color: #0d6efd;
-        }
-        .btn-info:hover {
-            background-color: #0a58ca;
-            border-color: #0a58ca;
-        }
-        .btn-secondary {
-            background-color: #6c757d;
-            border-color: #6c757d;
-        }
-        .btn-secondary:hover {
-            background-color: #5a6268;
-            border-color: #545b62;
-        }
-        .button-row {
-            display: flex;
-            justify-content: center;
-            gap: 10px;
-            margin-top: 20px;
-        }
+        
         .modal-dialog {
-            margin: 0;
+            max-width: 900px;
+        }
+        
+        #webcam-stream {
             max-width: 100%;
-            height: 100vh;
+            height: 280px;
+            object-fit: cover;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
         }
-        .modal-header {
-            border-bottom: none;
+        
+        .modal-body {
+            padding: 32px;
         }
-        .modal-footer {
-            border-top: none;
-            justify-content: center;
-            padding: 10px;
+        
+        .form-label {
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 8px;
+            font-size: 14px;
         }
-        .instructions {
-            font-size: 0.9rem;
-            margin-bottom: 15px;
+        
+        .form-control {
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            padding: 12px 16px;
+            font-size: 15px;
+            transition: all 0.2s ease;
         }
+        
+        .form-control:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+        
+        .btn-info {
+            background: var(--primary);
+            border: none;
+            padding: 12px 24px;
+            border-radius: 10px;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+        
+        .btn-info:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(79, 70, 229, 0.3);
+        }
+        
+        .btn-primary {
+            background: var(--primary);
+            border: none;
+            padding: 12px 32px;
+            border-radius: 10px;
+            font-weight: 600;
+        }
+        
+        .btn-primary:hover {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+        }
+        
+        .btn-secondary {
+            background: var(--text-muted);
+            border: none;
+            padding: 12px 32px;
+            border-radius: 10px;
+            font-weight: 600;
+        }
+        
+        .alert {
+            border-radius: 10px;
+            padding: 16px;
+            border-left: 4px solid;
+        }
+        
+        .alert-warning {
+            background: #FEF3C7;
+            border-color: #F59E0B;
+            color: #92400E;
+        }
+        
+        .alert-danger {
+            background: #FEE2E2;
+            border-color: #EF4444;
+            color: #991B1B;
+        }
+        
         .instructions h4 {
-            font-size: 1.1rem;
-            margin-bottom: 10px;
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 12px;
         }
+        
         .instructions ul {
-            padding-left: 20px;
-            margin-bottom: 0;
+            padding-left: 24px;
+        }
+        
+        .instructions li {
+            margin-bottom: 8px;
+        }
+        
+        .card {
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            margin-top: 16px;
+        }
+        
+        .modal-footer {
+            border-top: 2px solid var(--border);
+            padding: 20px 32px;
+            gap: 12px;
         }
     </style>
 </head>
 <body>
-    
-    <!-- Login Modal -->
-    <div id="loginModal" tabindex="-1" aria-labelledby="loginModalLabel" aria-hidden="true">
+    <div id="loginModal" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
-                <!-- Modal Header -->
                 <div class="modal-header">
-                    <h5 class="modal-title" id="loginModalLabel">Student Login with Face Recognition</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <h5 class="modal-title">🔐 Student Login with Face Recognition</h5>
                 </div>
                 <div class="container mt-3">
-                    <!-- Instructions Section -->
                     <div class="alert alert-warning instructions" role="alert">
                         <h4 class="alert-heading">Instructions for Login:</h4>
                         <ul>
-                            
-                            <li>First Click on <strong>Capture Photo</strong> to take a snapshot.</li>
-                            <li>Enter your email and password in the login form.</li>
-                            <li>Click <strong>Login</strong> to authenticate.</li>
+                            <li>Click on <strong>Capture Photo</strong> to take a snapshot</li>
+                            <li>Enter your email and password in the login form</li>
+                            <li>Click <strong>Login</strong> to authenticate</li>
                         </ul>
                     </div>
 
-                    <!-- Modal Body -->
                     <div class="modal-body">
                         <div class="row">
-                            <!-- Login Form Section -->
                             <div class="col-md-6">
                                 <form id="login-form" method="POST" enctype="multipart/form-data">
                                     {% csrf_token %}
@@ -153,16 +206,14 @@
                                 </form>
                             </div>
 
-                            <!-- Face Recognition Section -->
                             <div class="col-md-6 text-center">
-                                <h5>Face Recognition</h5>
+                                <h5 style="font-weight: 700; margin-bottom: 16px;">Face Recognition</h5>
                                 <div class="position-relative">
                                     <img id="webcam-stream" src="{% url 'video_feed' %}" alt="Video Feed" class="img-fluid rounded shadow">
                                     <canvas id="canvas" class="d-none"></canvas>
                                 </div>
-                                <button id="take-photo-btn" class="btn btn-info mt-3">Capture Photo</button>
+                                <button id="take-photo-btn" class="btn btn-info mt-3">📸 Capture Photo</button>
 
-                                <!-- Captured Photo Section -->
                                 <div class="captured-photo card">
                                     <div class="card-body">
                                         <h5 class="card-title">Captured Photo</h5>
@@ -173,17 +224,15 @@
                         </div>
                     </div>
 
-                    <!-- Modal Footer with Buttons aligned in a row -->
                     <div class="modal-footer button-row">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                        <button type="button" class="btn btn-primary" id="login-btn">Login</button>
+                        <button type="button" class="btn btn-primary" id="login-btn">🚀 Login</button>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Bootstrap JS and Dependencies -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         const webcamStream = document.getElementById('webcam-stream');
