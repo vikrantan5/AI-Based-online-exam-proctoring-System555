@@ -31,8 +31,7 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-z_+&zcw%md$8ai@dpaaje
 DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 
 
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '*').split(',')
-
+ALLOWED_HOSTS = ['*']
 
 # Application definition
 
